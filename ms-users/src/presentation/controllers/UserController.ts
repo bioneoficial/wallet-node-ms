@@ -59,91 +59,82 @@ export class UserController {
     request: FastifyRequest,
     reply: FastifyReply
   ): Promise<void> {
-    try {
-      const { id } = userIdParamSchema.parse(request.params);
+    const { id } = userIdParamSchema.parse(request.params);
+    const userId = request.user?.sub;
 
-      const user = await this.getUserByIdUseCase.execute(id);
-
-      if (!user) {
-        reply.status(404).send({ error: 'Not Found', message: 'User not found' });
-        return;
-      }
-
-      reply.send({
-        id: user.id,
-        first_name: user.firstName,
-        last_name: user.lastName,
-        email: user.email,
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        reply.status(400).send({ error: 'Validation Error', details: error.errors });
-        return;
-      }
-      throw error;
+    if (id !== userId) {
+      reply.status(403).send({ error: 'Forbidden', message: 'You can only access your own profile' });
+      return;
     }
+
+    const user = await this.getUserByIdUseCase.execute(id);
+
+    if (!user) {
+      reply.status(404).send({ error: 'Not Found', message: 'User not found' });
+      return;
+    }
+
+    reply.send({
+      id: user.id,
+      first_name: user.firstName,
+      last_name: user.lastName,
+      email: user.email,
+    });
   }
 
   async update(
     request: FastifyRequest,
     reply: FastifyReply
   ): Promise<void> {
-    try {
-      const { id } = userIdParamSchema.parse(request.params);
-      const validated = updateUserSchema.parse(request.body);
+    const { id } = userIdParamSchema.parse(request.params);
+    const userId = request.user?.sub;
 
-      const user = await this.updateUserUseCase.execute(id, {
-        firstName: validated.first_name,
-        lastName: validated.last_name,
-        email: validated.email,
-        password: validated.password,
-      });
-
-      if (!user) {
-        reply.status(404).send({ error: 'Not Found', message: 'User not found' });
-        return;
-      }
-
-      reply.send({
-        id: user.id,
-        first_name: user.firstName,
-        last_name: user.lastName,
-        email: user.email,
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        reply.status(400).send({ error: 'Validation Error', details: error.errors });
-        return;
-      }
-      if (error instanceof Error && error.message === 'Email already in use') {
-        reply.status(409).send({ error: 'Conflict', message: error.message });
-        return;
-      }
-      throw error;
+    if (id !== userId) {
+      reply.status(403).send({ error: 'Forbidden', message: 'You can only update your own profile' });
+      return;
     }
+
+    const validated = updateUserSchema.parse(request.body);
+
+    const user = await this.updateUserUseCase.execute(id, {
+      firstName: validated.first_name,
+      lastName: validated.last_name,
+      email: validated.email,
+      password: validated.password,
+    });
+
+    if (!user) {
+      reply.status(404).send({ error: 'Not Found', message: 'User not found' });
+      return;
+    }
+
+    reply.send({
+      id: user.id,
+      first_name: user.firstName,
+      last_name: user.lastName,
+      email: user.email,
+    });
   }
 
   async delete(
     request: FastifyRequest,
     reply: FastifyReply
   ): Promise<void> {
-    try {
-      const { id } = userIdParamSchema.parse(request.params);
+    const { id } = userIdParamSchema.parse(request.params);
+    const userId = request.user?.sub;
 
-      const deleted = await this.deleteUserUseCase.execute(id);
-
-      if (!deleted) {
-        reply.status(404).send({ error: 'Not Found', message: 'User not found' });
-        return;
-      }
-
-      reply.status(204).send();
-    } catch (error) {
-      if (error instanceof ZodError) {
-        reply.status(400).send({ error: 'Validation Error', details: error.errors });
-        return;
-      }
-      throw error;
+    if (id !== userId) {
+      reply.status(403).send({ error: 'Forbidden', message: 'You can only delete your own profile' });
+      return;
     }
+
+    const deleted = await this.deleteUserUseCase.execute(id);
+
+    if (!deleted) {
+      reply.status(404).send({ error: 'Not Found', message: 'User not found' });
+      return;
+    }
+
+    reply.status(204).send();
   }
 }

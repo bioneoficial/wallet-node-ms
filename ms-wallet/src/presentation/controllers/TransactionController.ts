@@ -22,8 +22,15 @@ export class TransactionController {
     request: FastifyRequest<{ Body: CreateTransactionBody }>,
     reply: FastifyReply
   ): Promise<void> {
+    const userId = request.user?.sub;
+
+    if (!userId) {
+      reply.status(401).send({ error: 'Unauthorized', message: 'User not authenticated' });
+      return;
+    }
+
     const transaction = await this.createTransactionUseCase.execute({
-      userId: request.body.user_id,
+      userId,
       amount: request.body.amount,
       type: request.body.type as TransactionType,
     });
