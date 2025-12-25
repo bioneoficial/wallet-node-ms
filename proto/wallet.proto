@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package wallet;
+
+service WalletService {
+  rpc GetBalance (GetBalanceRequest) returns (BalanceResponse);
+  rpc GetTransactions (GetTransactionsRequest) returns (TransactionsResponse);
+  rpc CreateTransaction (CreateTransactionRequest) returns (TransactionResponse);
+  rpc DeleteUserTransactions (DeleteUserTransactionsRequest) returns (DeleteUserTransactionsResponse);
+}
+
+message GetBalanceRequest {
+  string user_id = 1;
+  string internal_token = 2;
+}
+
+message BalanceResponse {
+  int64 amount = 1;
+}
+
+message GetTransactionsRequest {
+  string user_id = 1;
+  string type = 2;
+  string internal_token = 3;
+}
+
+message Transaction {
+  string id = 1;
+  string user_id = 2;
+  int64 amount = 3;
+  string type = 4;
+  string created_at = 5;
+}
+
+message TransactionsResponse {
+  repeated Transaction transactions = 1;
+}
+
+message CreateTransactionRequest {
+  string user_id = 1;
+  int64 amount = 2;
+  string type = 3;
+  string internal_token = 4;
+}
+
+message TransactionResponse {
+  Transaction transaction = 1;
+}
+
+message DeleteUserTransactionsRequest {
+  string user_id = 1;
+  string internal_token = 2;
+}
+
+message DeleteUserTransactionsResponse {
+  bool success = 1;
+  int32 deleted_count = 2;
+}
