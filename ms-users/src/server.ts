@@ -1,7 +1,7 @@
 import { buildApp } from './app.js';
 import { prisma } from './infrastructure/database/prisma.js';
 import { env } from './config/env.js';
-import pino from 'pino';
+import { pino } from 'pino';
 
 const logger = pino({
   level: env.NODE_ENV === 'development' ? 'debug' : 'info',

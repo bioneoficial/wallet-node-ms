@@ -70,7 +70,7 @@ export class UserController {
   }
 
   async findById(
-    request: FastifyRequest<{ Params: UserIdParam }>,
+    request: FastifyRequest,
     reply: FastifyReply
   ): Promise<void> {
     try {
@@ -99,7 +99,7 @@ export class UserController {
   }
 
   async update(
-    request: FastifyRequest<{ Params: UserIdParam; Body: UpdateUserBody }>,
+    request: FastifyRequest,
     reply: FastifyReply
   ): Promise<void> {
     try {
@@ -138,7 +138,7 @@ export class UserController {
   }
 
   async delete(
-    request: FastifyRequest<{ Params: UserIdParam }>,
+    request: FastifyRequest,
     reply: FastifyReply
   ): Promise<void> {
     try {

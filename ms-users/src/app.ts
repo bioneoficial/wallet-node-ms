@@ -94,7 +94,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   const updateUserUseCase = new UpdateUserUseCase(userRepository);
   const deleteUserUseCase = new DeleteUserUseCase(userRepository, walletClient);
   const authenticateUserUseCase = new AuthenticateUserUseCase(userRepository, {
-    sign: (payload) => app.jwt.sign(payload, { expiresIn: '24h' }),
+    sign: (payload: { sub: string; email: string }) => app.jwt.sign(payload, { expiresIn: '24h' }),
   });
 
   const userController = new UserController(

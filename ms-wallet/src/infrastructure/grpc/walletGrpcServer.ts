@@ -7,7 +7,7 @@ import { GetTransactionsUseCase } from '../../application/usecases/GetTransactio
 import { GetBalanceUseCase } from '../../application/usecases/GetBalanceUseCase.js';
 import { DeleteUserTransactionsUseCase } from '../../application/usecases/DeleteUserTransactionsUseCase.js';
 import { TransactionType } from '../../domain/entities/Transaction.js';
-import { Logger } from 'pino';
+import type { Logger } from 'pino';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

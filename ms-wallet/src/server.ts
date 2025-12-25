@@ -8,7 +8,7 @@ import { GetBalanceUseCase } from './application/usecases/GetBalanceUseCase.js';
 import { DeleteUserTransactionsUseCase } from './application/usecases/DeleteUserTransactionsUseCase.js';
 import { createWalletGrpcServer } from './infrastructure/grpc/walletGrpcServer.js';
 import { env } from './config/env.js';
-import pino from 'pino';
+import { pino } from 'pino';
 
 const logger = pino({
   level: env.NODE_ENV === 'development' ? 'debug' : 'info',

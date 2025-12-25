@@ -3,8 +3,8 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 export interface JwtPayload {
   sub: string;
   email: string;
-  iat: number;
-  exp: number;
+  iat?: number;
+  exp?: number;
 }
 
 declare module '@fastify/jwt' {
