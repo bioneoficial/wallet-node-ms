@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { UserRepository } from '../../domain/repositories/UserRepository.js';
 import { UserResponse } from '../../domain/entities/User.js';
 

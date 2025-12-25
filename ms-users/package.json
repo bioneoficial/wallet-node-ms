@@ -31,14 +31,14 @@
     "@grpc/grpc-js": "^1.10.1",
     "@grpc/proto-loader": "^0.7.10",
     "@prisma/client": "^5.10.2",
-    "bcrypt": "^5.1.1",
+    "bcryptjs": "^2.4.3",
     "fastify": "^4.26.2",
     "pino": "^8.19.0",
     "pino-pretty": "^10.3.1",
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@types/bcrypt": "^5.0.2",
+    "@types/bcryptjs": "^2.4.6",
     "@types/jest": "^29.5.12",
     "@types/node": "^20.11.24",
     "@typescript-eslint/eslint-plugin": "^7.1.0",

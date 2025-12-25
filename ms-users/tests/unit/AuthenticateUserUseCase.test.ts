@@ -1,11 +1,11 @@
 import { AuthenticateUserUseCase, TokenGenerator } from '../../src/application/usecases/AuthenticateUserUseCase';
 import { UserRepository } from '../../src/domain/repositories/UserRepository';
 
-jest.mock('bcrypt', () => ({
+jest.mock('bcryptjs', () => ({
   compare: jest.fn(),
 }));
 
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 const createMockRepository = (): jest.Mocked<UserRepository> => ({
   create: jest.fn(),
