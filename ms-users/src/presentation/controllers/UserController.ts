@@ -27,33 +27,19 @@ export class UserController {
     request: FastifyRequest<{ Body: CreateUserBody }>,
     reply: FastifyReply
   ): Promise<void> {
-    try {
-      const validated = createUserSchema.parse(request.body);
+    const user = await this.createUserUseCase.execute({
+      firstName: request.body.first_name,
+      lastName: request.body.last_name,
+      email: request.body.email,
+      password: request.body.password,
+    });
 
-      const user = await this.createUserUseCase.execute({
-        firstName: validated.first_name,
-        lastName: validated.last_name,
-        email: validated.email,
-        password: validated.password,
-      });
-
-      reply.status(201).send({
-        id: user.id,
-        first_name: user.firstName,
-        last_name: user.lastName,
-        email: user.email,
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        reply.status(400).send({ error: 'Validation Error', details: error.errors });
-        return;
-      }
-      if (error instanceof Error && error.message === 'User with this email already exists') {
-        reply.status(409).send({ error: 'Conflict', message: error.message });
-        return;
-      }
-      throw error;
-    }
+    reply.status(201).send({
+      id: user.id,
+      first_name: user.firstName,
+      last_name: user.lastName,
+      email: user.email,
+    });
   }
 
   async findAll(_request: FastifyRequest, reply: FastifyReply): Promise<void> {

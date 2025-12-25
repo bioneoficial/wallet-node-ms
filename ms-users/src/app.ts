@@ -1,4 +1,5 @@
-import Fastify, { FastifyInstance } from 'fastify';
+import Fastify from 'fastify';
+import { serializerCompiler, validatorCompiler, ZodTypeProvider } from 'fastify-type-provider-zod';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
@@ -19,8 +20,9 @@ import { AuthController } from './presentation/controllers/AuthController.js';
 import { userRoutes } from './presentation/routes/userRoutes.js';
 import { authRoutes } from './presentation/routes/authRoutes.js';
 import { env } from './config/env.js';
+import { globalErrorHandler } from './infrastructure/http/errorHandler.js';
 
-export async function buildApp(): Promise<FastifyInstance> {
+export async function buildApp() {
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === 'development' ? 'debug' : 'info',
@@ -34,7 +36,10 @@ export async function buildApp(): Promise<FastifyInstance> {
             }
           : undefined,
     },
-  });
+  }).withTypeProvider<ZodTypeProvider>();
+
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
 
   await app.register(cors, {
     origin: true,
@@ -84,6 +89,8 @@ export async function buildApp(): Promise<FastifyInstance> {
       deepLinking: false,
     },
   });
+
+  app.setErrorHandler(globalErrorHandler);
 
   const userRepository = new PrismaUserRepository(prisma);
   const walletClient = createWalletGrpcClient(env.WALLET_GRPC_URL, env.JWT_INTERNAL_SECRET);

@@ -1,6 +1,8 @@
 import { FastifyInstance } from 'fastify';
+import { z } from 'zod';
 import { TransactionController } from '../controllers/TransactionController.js';
 import { authMiddleware } from '../middlewares/authMiddleware.js';
+import { createTransactionSchema, getTransactionsQuerySchema } from '../../infrastructure/http/schemas/transactionSchemas.js';
 
 export async function transactionRoutes(
   fastify: FastifyInstance,
@@ -14,33 +16,15 @@ export async function transactionRoutes(
       schema: {
         description: 'Create a new transaction',
         tags: ['Transactions'],
-        body: {
-          type: 'object',
-          required: ['user_id', 'amount', 'type'],
-          properties: {
-            user_id: { type: 'string', format: 'uuid' },
-            amount: { type: 'integer', minimum: 1 },
-            type: { type: 'string', enum: ['CREDIT', 'DEBIT'] },
-          },
-        },
+        body: createTransactionSchema,
         response: {
-          201: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              user_id: { type: 'string' },
-              amount: { type: 'integer' },
-              type: { type: 'string' },
-              created_at: { type: 'string' },
-            },
-          },
-          401: {
-            type: 'object',
-            properties: {
-              error: { type: 'string' },
-              message: { type: 'string' },
-            },
-          },
+          201: z.object({
+            id: z.string(),
+            user_id: z.string(),
+            amount: z.number().int(),
+            type: z.enum(['CREDIT', 'DEBIT']),
+            created_at: z.string(),
+          }),
         },
         security: [{ bearerAuth: [] }],
       },

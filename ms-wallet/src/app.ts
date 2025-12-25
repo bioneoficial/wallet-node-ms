@@ -1,4 +1,5 @@
-import Fastify, { FastifyInstance } from 'fastify';
+import Fastify from 'fastify';
+import { serializerCompiler, validatorCompiler, ZodTypeProvider } from 'fastify-type-provider-zod';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
@@ -13,8 +14,9 @@ import { GetBalanceUseCase } from './application/usecases/GetBalanceUseCase.js';
 import { TransactionController } from './presentation/controllers/TransactionController.js';
 import { transactionRoutes } from './presentation/routes/transactionRoutes.js';
 import { env } from './config/env.js';
+import { globalErrorHandler } from './infrastructure/http/errorHandler.js';
 
-export async function buildApp(): Promise<FastifyInstance> {
+export async function buildApp() {
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === 'development' ? 'debug' : 'info',
@@ -28,7 +30,10 @@ export async function buildApp(): Promise<FastifyInstance> {
             }
           : undefined,
     },
-  });
+  }).withTypeProvider<ZodTypeProvider>();
+
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
 
   await app.register(cors, {
     origin: true,
@@ -78,6 +83,8 @@ export async function buildApp(): Promise<FastifyInstance> {
       deepLinking: false,
     },
   });
+
+  app.setErrorHandler(globalErrorHandler);
 
   const transactionRepository = new PrismaTransactionRepository(prisma);
   const createTransactionUseCase = new CreateTransactionUseCase(transactionRepository);

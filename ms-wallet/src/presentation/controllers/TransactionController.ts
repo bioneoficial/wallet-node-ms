@@ -22,29 +22,19 @@ export class TransactionController {
     request: FastifyRequest<{ Body: CreateTransactionBody }>,
     reply: FastifyReply
   ): Promise<void> {
-    try {
-      const validated = createTransactionSchema.parse(request.body);
+    const transaction = await this.createTransactionUseCase.execute({
+      userId: request.body.user_id,
+      amount: request.body.amount,
+      type: request.body.type as TransactionType,
+    });
 
-      const transaction = await this.createTransactionUseCase.execute({
-        userId: validated.user_id,
-        amount: validated.amount,
-        type: validated.type as TransactionType,
-      });
-
-      reply.status(201).send({
-        id: transaction.id,
-        user_id: transaction.userId,
-        amount: transaction.amount,
-        type: transaction.type,
-        created_at: transaction.createdAt.toISOString(),
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        reply.status(400).send({ error: 'Validation Error', details: error.errors });
-        return;
-      }
-      throw error;
-    }
+    reply.status(201).send({
+      id: transaction.id,
+      user_id: transaction.userId,
+      amount: transaction.amount,
+      type: transaction.type,
+      created_at: transaction.createdAt.toISOString(),
+    });
   }
 
   async findAll(

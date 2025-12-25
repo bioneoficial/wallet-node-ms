@@ -1,6 +1,8 @@
 import { FastifyInstance } from 'fastify';
+import { z } from 'zod';
 import { UserController } from '../controllers/UserController.js';
 import { authMiddleware } from '../middlewares/authMiddleware.js';
+import { createUserSchema } from '../../infrastructure/http/schemas/userSchemas.js';
 
 const userResponseSchema = {
   type: 'object',
@@ -30,20 +32,14 @@ export async function userRoutes(
       schema: {
         description: 'Create a new user',
         tags: ['Users'],
-        body: {
-          type: 'object',
-          required: ['first_name', 'last_name', 'email', 'password'],
-          properties: {
-            first_name: { type: 'string' },
-            last_name: { type: 'string' },
-            email: { type: 'string', format: 'email' },
-            password: { type: 'string', minLength: 6 },
-          },
-        },
+        body: createUserSchema,
         response: {
-          201: userResponseSchema,
-          400: errorResponseSchema,
-          409: errorResponseSchema,
+          201: z.object({
+            id: z.string(),
+            first_name: z.string(),
+            last_name: z.string(),
+            email: z.string().email(),
+          }),
         },
       },
     },
