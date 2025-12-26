@@ -45,3 +45,24 @@ This microservice must be a digital Wallet where the user transactions will be s
 
 
 Happy coding! 🤓
+
+## API Documentation
+
+### Authentication
+All protected routes require a Bearer Token (JWT) in the `Authorization` header.
+
+### Users Service (Port 3002)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST   | `/users` | Register a new user |
+| GET    | `/users/me` | Get authenticated user profile |
+| PATCH  | `/users/me` | Update authenticated user profile |
+| DELETE | `/users/me` | Delete authenticated user profile |
+| GET    | `/users` | List all users |
+
+### Wallet Service (Port 3001)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST   | `/transactions` | Create a transaction (CREDIT/DEBIT) |
+| GET    | `/transactions` | List user transactions |
+| GET    | `/balance` | Get user balance |

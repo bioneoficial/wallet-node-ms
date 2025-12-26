@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
 export const createTransactionSchema = z.object({
-  user_id: z.string().uuid('Invalid user ID format'),
   amount: z.number().int().positive('Amount must be a positive integer'),
   type: z.enum(['CREDIT', 'DEBIT']),
 });

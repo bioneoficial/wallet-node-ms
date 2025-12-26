@@ -1,56 +1,47 @@
 import { FastifyInstance } from 'fastify';
+import { ZodTypeProvider } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import { UserController } from '../controllers/UserController.js';
 import { authMiddleware } from '../middlewares/authMiddleware.js';
+import {
+  createUserSchema,
+  updateUserSchema,
+} from '../../infrastructure/http/schemas/userSchemas.js';
 
-const userResponseSchema = {
-  type: 'object',
-  properties: {
-    id: { type: 'string' },
-    first_name: { type: 'string' },
-    last_name: { type: 'string' },
-    email: { type: 'string' },
-  },
-};
+const userResponseSchema = z.object({
+  id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  email: z.string(),
+});
 
-const errorResponseSchema = {
-  type: 'object',
-  properties: {
-    error: { type: 'string' },
-    message: { type: 'string' },
-  },
-};
+const errorResponseSchema = z.object({
+  error: z.string(),
+  message: z.string(),
+});
 
 export async function userRoutes(
   fastify: FastifyInstance,
   controller: UserController
 ): Promise<void> {
-  fastify.post(
+  const app = fastify.withTypeProvider<ZodTypeProvider>();
+
+  app.post(
     '/users',
     {
       schema: {
         description: 'Create a new user',
         tags: ['Users'],
-        body: {
-          type: 'object',
-          required: ['first_name', 'last_name', 'email', 'password'],
-          properties: {
-            first_name: { type: 'string' },
-            last_name: { type: 'string' },
-            email: { type: 'string', format: 'email' },
-            password: { type: 'string', minLength: 6 },
-          },
-        },
+        body: createUserSchema,
         response: {
           201: userResponseSchema,
-          400: errorResponseSchema,
-          409: errorResponseSchema,
         },
       },
     },
-    controller.create.bind(controller)
+    controller.create.bind(controller) as any
   );
 
-  fastify.get(
+  app.get(
     '/users',
     {
       onRequest: [authMiddleware],
@@ -58,31 +49,22 @@ export async function userRoutes(
         description: 'Get all users',
         tags: ['Users'],
         response: {
-          200: {
-            type: 'array',
-            items: userResponseSchema,
-          },
+          200: z.array(userResponseSchema),
           401: errorResponseSchema,
         },
         security: [{ bearerAuth: [] }],
       },
     },
-    controller.findAll.bind(controller)
+    controller.findAll.bind(controller) as any
   );
 
-  fastify.get(
-    '/users/:id',
+  app.get(
+    '/users/me',
     {
       onRequest: [authMiddleware],
       schema: {
-        description: 'Get user by ID',
+        description: 'Get authenticated user profile',
         tags: ['Users'],
-        params: {
-          type: 'object',
-          properties: {
-            id: { type: 'string' },
-          },
-        },
         response: {
           200: userResponseSchema,
           401: errorResponseSchema,
@@ -91,31 +73,17 @@ export async function userRoutes(
         security: [{ bearerAuth: [] }],
       },
     },
-    controller.findById.bind(controller)
+    controller.me.bind(controller) as any
   );
 
-  fastify.patch(
-    '/users/:id',
+  app.patch(
+    '/users/me',
     {
       onRequest: [authMiddleware],
       schema: {
-        description: 'Update user by ID',
+        description: 'Update authenticated user profile',
         tags: ['Users'],
-        params: {
-          type: 'object',
-          properties: {
-            id: { type: 'string' },
-          },
-        },
-        body: {
-          type: 'object',
-          properties: {
-            first_name: { type: 'string' },
-            last_name: { type: 'string' },
-            email: { type: 'string', format: 'email' },
-            password: { type: 'string', minLength: 6 },
-          },
-        },
+        body: updateUserSchema,
         response: {
           200: userResponseSchema,
           401: errorResponseSchema,
@@ -125,30 +93,24 @@ export async function userRoutes(
         security: [{ bearerAuth: [] }],
       },
     },
-    controller.update.bind(controller)
+    controller.update.bind(controller) as any
   );
 
-  fastify.delete(
-    '/users/:id',
+  app.delete(
+    '/users/me',
     {
       onRequest: [authMiddleware],
       schema: {
-        description: 'Delete user by ID',
+        description: 'Delete authenticated user profile',
         tags: ['Users'],
-        params: {
-          type: 'object',
-          properties: {
-            id: { type: 'string' },
-          },
-        },
         response: {
-          204: { type: 'null' },
+          204: z.null(),
           401: errorResponseSchema,
           404: errorResponseSchema,
         },
         security: [{ bearerAuth: [] }],
       },
     },
-    controller.delete.bind(controller)
+    controller.delete.bind(controller) as any
   );
 }
