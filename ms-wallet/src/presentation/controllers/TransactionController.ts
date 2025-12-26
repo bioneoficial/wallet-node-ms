@@ -9,7 +9,6 @@ import {
   CreateTransactionBody,
   GetTransactionsQuery,
 } from '../../infrastructure/http/schemas/transactionSchemas.js';
-import { ZodError } from 'zod';
 
 export class TransactionController {
   constructor(
@@ -24,10 +23,8 @@ export class TransactionController {
   ): Promise<void> {
     const userId = request.user?.sub;
 
-    if (!userId) {
-      reply.status(401).send({ error: 'Unauthorized', message: 'User not authenticated' });
-      return;
-    }
+    // Guaranteed by authMiddleware
+    if (!userId) throw new Error('User context missing');
 
     const transaction = await this.createTransactionUseCase.execute({
       userId,
@@ -48,40 +45,33 @@ export class TransactionController {
     request: FastifyRequest<{ Querystring: GetTransactionsQuery }>,
     reply: FastifyReply
   ): Promise<void> {
-    try {
-      const validated = getTransactionsQuerySchema.parse(request.query);
-      const userId = request.user?.sub;
+    const { type } = request.query;
+    const userId = request.user?.sub;
 
-      const transactions = await this.getTransactionsUseCase.execute({
-        userId,
-        type: validated.type as TransactionType | undefined,
-      });
+    // Guaranteed by authMiddleware
+    if (!userId) throw new Error('User context missing');
 
-      const response = transactions.map((t) => ({
-        id: t.id,
-        user_id: t.userId,
-        amount: t.amount,
-        type: t.type,
-        created_at: t.createdAt.toISOString(),
-      }));
+    const transactions = await this.getTransactionsUseCase.execute({
+      userId,
+      type: type as TransactionType | undefined,
+    });
 
-      reply.send(response);
-    } catch (error) {
-      if (error instanceof ZodError) {
-        reply.status(400).send({ error: 'Validation Error', details: error.errors });
-        return;
-      }
-      throw error;
-    }
+    const response = transactions.map((t) => ({
+      id: t.id,
+      user_id: t.userId,
+      amount: t.amount,
+      type: t.type,
+      created_at: t.createdAt.toISOString(),
+    }));
+
+    reply.send(response);
   }
 
   async getBalance(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     const userId = request.user?.sub;
 
-    if (!userId) {
-      reply.status(400).send({ error: 'User ID is required' });
-      return;
-    }
+    // Guaranteed by authMiddleware
+    if (!userId) throw new Error('User context missing');
 
     const balance = await this.getBalanceUseCase.execute(userId);
 
