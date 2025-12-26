@@ -6,7 +6,6 @@ import { authMiddleware } from '../middlewares/authMiddleware.js';
 import {
   createUserSchema,
   updateUserSchema,
-  userIdParamSchema,
 } from '../../infrastructure/http/schemas/userSchemas.js';
 
 const userResponseSchema = z.object({
@@ -60,13 +59,12 @@ export async function userRoutes(
   );
 
   app.get(
-    '/users/:id',
+    '/users/me',
     {
       onRequest: [authMiddleware],
       schema: {
-        description: 'Get user by ID',
+        description: 'Get authenticated user profile',
         tags: ['Users'],
-        params: userIdParamSchema,
         response: {
           200: userResponseSchema,
           401: errorResponseSchema,
@@ -75,17 +73,16 @@ export async function userRoutes(
         security: [{ bearerAuth: [] }],
       },
     },
-    controller.findById.bind(controller) as any
+    controller.me.bind(controller) as any
   );
 
   app.patch(
-    '/users/:id',
+    '/users/me',
     {
       onRequest: [authMiddleware],
       schema: {
-        description: 'Update user by ID',
+        description: 'Update authenticated user profile',
         tags: ['Users'],
-        params: userIdParamSchema,
         body: updateUserSchema,
         response: {
           200: userResponseSchema,
@@ -100,13 +97,12 @@ export async function userRoutes(
   );
 
   app.delete(
-    '/users/:id',
+    '/users/me',
     {
       onRequest: [authMiddleware],
       schema: {
-        description: 'Delete user by ID',
+        description: 'Delete authenticated user profile',
         tags: ['Users'],
-        params: userIdParamSchema,
         response: {
           204: z.null(),
           401: errorResponseSchema,

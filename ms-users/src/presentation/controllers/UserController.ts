@@ -7,7 +7,6 @@ import { DeleteUserUseCase } from '../../application/usecases/DeleteUserUseCase.
 import {
   CreateUserBody,
   UpdateUserBody,
-  UserIdParam,
 } from '../../infrastructure/http/schemas/userSchemas.js';
 
 export class UserController {
@@ -51,19 +50,18 @@ export class UserController {
     reply.send(response);
   }
 
-  async findById(
-    request: FastifyRequest<{ Params: UserIdParam }>,
+  async me(
+    request: FastifyRequest,
     reply: FastifyReply
   ): Promise<void> {
-    const { id } = request.params;
     const userId = request.user?.sub;
 
-    if (id !== userId) {
-      reply.status(403).send({ error: 'Forbidden', message: 'You can only access your own profile' });
-      return;
+    if (!userId) {
+       reply.status(401).send({ error: 'Unauthorized', message: 'User not authenticated' });
+       return;
     }
 
-    const user = await this.getUserByIdUseCase.execute(id);
+    const user = await this.getUserByIdUseCase.execute(userId);
 
     if (!user) {
       reply.status(404).send({ error: 'Not Found', message: 'User not found' });
@@ -79,18 +77,17 @@ export class UserController {
   }
 
   async update(
-    request: FastifyRequest<{ Params: UserIdParam; Body: UpdateUserBody }>,
+    request: FastifyRequest<{ Body: UpdateUserBody }>,
     reply: FastifyReply
   ): Promise<void> {
-    const { id } = request.params;
     const userId = request.user?.sub;
 
-    if (id !== userId) {
-      reply.status(403).send({ error: 'Forbidden', message: 'You can only update your own profile' });
-      return;
+    if (!userId) {
+       reply.status(401).send({ error: 'Unauthorized', message: 'User not authenticated' });
+       return;
     }
 
-    const user = await this.updateUserUseCase.execute(id, {
+    const user = await this.updateUserUseCase.execute(userId, {
       firstName: request.body.first_name,
       lastName: request.body.last_name,
       email: request.body.email,
@@ -111,18 +108,17 @@ export class UserController {
   }
 
   async delete(
-    request: FastifyRequest<{ Params: UserIdParam }>,
+    request: FastifyRequest,
     reply: FastifyReply
   ): Promise<void> {
-    const { id } = request.params;
     const userId = request.user?.sub;
 
-    if (id !== userId) {
-      reply.status(403).send({ error: 'Forbidden', message: 'You can only delete your own profile' });
-      return;
+    if (!userId) {
+       reply.status(401).send({ error: 'Unauthorized', message: 'User not authenticated' });
+       return;
     }
 
-    const deleted = await this.deleteUserUseCase.execute(id);
+    const deleted = await this.deleteUserUseCase.execute(userId);
 
     if (!deleted) {
       reply.status(404).send({ error: 'Not Found', message: 'User not found' });
