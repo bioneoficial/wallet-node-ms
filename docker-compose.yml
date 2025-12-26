@@ -26,11 +26,23 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    command: ["--replSet", "rs0", "--bind_ip_all"]
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  mongo-init:
+    image: mongo:7
+    container_name: mongo-init
+    depends_on:
+      mongo:
+        condition: service_healthy
+    volumes:
+      - ./mongo-init.sh:/mongo-init.sh
+    entrypoint: ["bash", "/mongo-init.sh"]
+    restart: "no"
 
   ms-wallet:
     build:
@@ -62,7 +74,7 @@ services:
       target: development
     container_name: ms-users
     environment:
-      DATABASE_URL: mongodb://mongo:mongo@mongo:27017/users_db?authSource=admin
+      DATABASE_URL: mongodb://mongo:mongo@mongo:27017/users_db?authSource=admin&replicaSet=rs0
       JWT_SECRET: ILIACHALLENGE
       JWT_INTERNAL_SECRET: ILIACHALLENGE_INTERNAL
       PORT: 3002
@@ -73,6 +85,8 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
+      mongo-init:
+        condition: service_completed_successfully
       ms-wallet:
         condition: service_started
     volumes:

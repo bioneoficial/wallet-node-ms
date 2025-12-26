@@ -1,5 +1,5 @@
 import Fastify from 'fastify';
-import { serializerCompiler, validatorCompiler, ZodTypeProvider } from 'fastify-type-provider-zod';
+import { serializerCompiler, validatorCompiler, ZodTypeProvider, jsonSchemaTransform } from 'fastify-type-provider-zod';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
@@ -74,6 +74,7 @@ export async function buildApp() {
         },
       },
     },
+    transform: jsonSchemaTransform,
   });
 
   await app.register(fastifySwaggerUi, {
