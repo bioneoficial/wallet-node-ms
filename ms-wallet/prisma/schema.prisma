@@ -15,7 +15,7 @@ enum TransactionType {
 model Transaction {
   id        String          @id @default(uuid())
   userId    String          @map("user_id")
-  amount    Int
+  amount    Decimal         @db.Decimal(10, 2)
   type      TransactionType
   createdAt DateTime        @default(now()) @map("created_at")
   updatedAt DateTime        @updatedAt @map("updated_at")

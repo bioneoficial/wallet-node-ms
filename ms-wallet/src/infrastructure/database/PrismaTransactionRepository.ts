@@ -53,7 +53,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
   }
 
   async getBalance(userId: string): Promise<BalanceResult> {
-    const result = await this.prisma.$queryRaw<{ amount: bigint }[]>`
+    const result = await this.prisma.$queryRaw<{ amount: unknown }[]>`
       SELECT 
         COALESCE(
           SUM(CASE WHEN type = 'CREDIT' THEN amount ELSE -amount END),
@@ -80,7 +80,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
     prismaTransaction: {
       id: string;
       userId: string;
-      amount: number;
+      amount: any;
       type: PrismaTransactionType;
       createdAt: Date;
       updatedAt: Date;
@@ -89,7 +89,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
     return {
       id: prismaTransaction.id,
       userId: prismaTransaction.userId,
-      amount: prismaTransaction.amount,
+      amount: Number(prismaTransaction.amount),
       type: prismaTransaction.type as TransactionType,
       createdAt: prismaTransaction.createdAt,
       updatedAt: prismaTransaction.updatedAt,

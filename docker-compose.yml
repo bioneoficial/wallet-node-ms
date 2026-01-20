@@ -26,7 +26,9 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
-    command: ["--replSet", "rs0", "--bind_ip_all"]
+      - ./mongo-keyfile:/tmp/mongo-keyfile:ro
+      - ./mongo-entrypoint-custom.sh:/mongo-entrypoint-custom.sh:ro
+    entrypoint: ["bash", "/mongo-entrypoint-custom.sh"]
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s

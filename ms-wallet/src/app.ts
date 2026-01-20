@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import { serializerCompiler, validatorCompiler, ZodTypeProvider, jsonSchemaTransform } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
@@ -107,13 +108,10 @@ export async function buildApp() {
       description: 'Health check endpoint',
       tags: ['Health'],
       response: {
-        200: {
-          type: 'object',
-          properties: {
-            status: { type: 'string' },
-            timestamp: { type: 'string' },
-          },
-        },
+        200: z.object({
+          status: z.string(),
+          timestamp: z.string(),
+        }),
       },
     },
   }, async () => {

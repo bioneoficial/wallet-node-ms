@@ -23,7 +23,7 @@ export async function transactionRoutes(
           201: z.object({
             id: z.string(),
             user_id: z.string(),
-            amount: z.number().int(),
+            amount: z.number(),
             type: z.enum(['CREDIT', 'DEBIT']),
             created_at: z.string(),
           }),
@@ -46,7 +46,7 @@ export async function transactionRoutes(
             z.object({
               id: z.string(),
               user_id: z.string(),
-              amount: z.number().int(),
+              amount: z.number(),
               type: z.string(),
               created_at: z.string(),
             })
@@ -70,7 +70,7 @@ export async function transactionRoutes(
         tags: ['Transactions'],
         response: {
           200: z.object({
-            amount: z.number().int(),
+            amount: z.number(),
           }),
           401: z.object({
             error: z.string(),
