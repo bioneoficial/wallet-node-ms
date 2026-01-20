@@ -41,6 +41,8 @@ coverage/
 # Planning docs (local only)
 planning/*.md
 PLANNING.md
+memory-bank/
+spec.md
 
 # Misc
 *.tgz
