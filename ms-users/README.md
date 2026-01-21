@@ -103,9 +103,41 @@ Write operations require the `Idempotency-Key` header:
 - `POST /users`
 - `PATCH /users/me`
 - `DELETE /users/me`
-- Reusing the same key with the same payload returns the stored response.
-- Reusing the same key with a different payload returns `409 Conflict`.
-- If the request is already being processed, the API returns `409 Conflict`.
+
+Reusing the same key with the same payload returns the stored response.  
+Reusing the same key with a different payload returns `409 Conflict`.  
+If the request is already being processed, the API returns `409 Conflict`.
+
+## Audit Logging
+
+All critical operations are automatically logged to the `audit_logs` collection:
+
+- **USER_CREATED** - When a new user registers
+- **USER_UPDATED** - When a user updates their profile
+- **USER_DELETED** - When a user deletes their account
+
+Each audit log captures:
+- User ID
+- Action performed
+- Resource affected
+- Metadata (contextual information)
+- IP address
+- User agent
+
+Audit logs are immutable and indexed by `userId`, `action`, and `createdAt` for efficient querying.
+
+## Role-Based Access Control (RBAC)
+
+The service implements role-based authorization with two roles:
+
+- **USER** (default) - Standard user with access to their own resources
+- **ADMIN** - Administrative user with elevated permissions
+
+### Protected Endpoints
+
+- `GET /users` - **Admin only**. Lists all users in the system.
+
+All other endpoints are restricted to the authenticated user's own resources (enforced via JWT `sub` claim).
 
 ### Auth
 

@@ -130,6 +130,22 @@ The service uses a **cached balance strategy** for performance and consistency:
 - Balance queries read directly from the cached value
 - This approach prevents race conditions and improves read performance
 
+## Audit Logging
+
+All transaction operations are automatically logged to the `audit_logs` table:
+
+- **TRANSACTION_CREATED** - When a transaction is created
+
+Each audit log captures:
+- User ID
+- Action performed
+- Resource affected (transactions)
+- Metadata (transaction ID, amount, type)
+- IP address
+- User agent
+
+Audit logs are immutable and indexed by `userId`, `action`, and `createdAt` for compliance and troubleshooting.
+
 ## Testing
 
 ```bash
