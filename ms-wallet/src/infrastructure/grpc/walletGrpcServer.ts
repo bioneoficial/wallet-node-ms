@@ -104,26 +104,19 @@ export function createWalletGrpcServer(
     ) => {
       try {
         const { user_id } = call.request;
+
+        if (!user_id) {
+          callback({
+            code: grpc.status.INVALID_ARGUMENT,
+            message: 'User ID is required',
+          } as grpc.ServiceError);
+          return;
+        }
+
         const authResult = authenticateInternalCall(call.metadata, user_id);
 
         if (authResult.error) {
           callback(authResult.error);
-          return;
-        }
-
-        if (!user_id) {
-          callback({
-            code: grpc.status.INVALID_ARGUMENT,
-            message: 'User ID is required',
-          } as grpc.ServiceError);
-          return;
-        }
-
-        if (!user_id) {
-          callback({
-            code: grpc.status.INVALID_ARGUMENT,
-            message: 'User ID is required',
-          } as grpc.ServiceError);
           return;
         }
 
@@ -144,6 +137,15 @@ export function createWalletGrpcServer(
     ) => {
       try {
         const { user_id, type } = call.request;
+
+        if (!user_id) {
+          callback({
+            code: grpc.status.INVALID_ARGUMENT,
+            message: 'User ID is required',
+          } as grpc.ServiceError);
+          return;
+        }
+
         const authResult = authenticateInternalCall(call.metadata, user_id);
 
         if (authResult.error) {
@@ -180,18 +182,19 @@ export function createWalletGrpcServer(
     ) => {
       try {
         const { user_id, amount, type } = call.request;
-        const authResult = authenticateInternalCall(call.metadata, user_id);
-
-        if (authResult.error) {
-          callback(authResult.error);
-          return;
-        }
 
         if (!user_id || !amount || !type) {
           callback({
             code: grpc.status.INVALID_ARGUMENT,
             message: 'User ID, amount, and type are required',
           } as grpc.ServiceError);
+          return;
+        }
+
+        const authResult = authenticateInternalCall(call.metadata, user_id);
+
+        if (authResult.error) {
+          callback(authResult.error);
           return;
         }
 
@@ -225,18 +228,19 @@ export function createWalletGrpcServer(
     ) => {
       try {
         const { user_id } = call.request;
-        const authResult = authenticateInternalCall(call.metadata, user_id);
-
-        if (authResult.error) {
-          callback(authResult.error);
-          return;
-        }
 
         if (!user_id) {
           callback({
             code: grpc.status.INVALID_ARGUMENT,
             message: 'User ID is required',
           } as grpc.ServiceError);
+          return;
+        }
+
+        const authResult = authenticateInternalCall(call.metadata, user_id);
+
+        if (authResult.error) {
+          callback(authResult.error);
           return;
         }
 
