@@ -92,9 +92,20 @@ docker run -p 3002:3002 --env-file .env ms-users
 |--------|----------|-------------|------|
 | `POST` | `/users` | Create a user | - |
 | `GET` | `/users` | List all users | JWT |
-| `GET` | `/users/:id` | Get user by ID | JWT |
-| `PATCH` | `/users/:id` | Update user | JWT |
-| `DELETE` | `/users/:id` | Delete user | JWT |
+| `GET` | `/users/me` | Get authenticated user profile | JWT |
+| `PATCH` | `/users/me` | Update authenticated user profile | JWT |
+| `DELETE` | `/users/me` | Delete authenticated user profile | JWT |
+
+### Idempotency
+
+Write operations require the `Idempotency-Key` header:
+
+- `POST /users`
+- `PATCH /users/me`
+- `DELETE /users/me`
+- Reusing the same key with the same payload returns the stored response.
+- Reusing the same key with a different payload returns `409 Conflict`.
+- If the request is already being processed, the API returns `409 Conflict`.
 
 ### Auth
 
@@ -112,6 +123,10 @@ docker run -p 3002:3002 --env-file .env ms-users
 ## gRPC Integration
 
 When a user is deleted, this microservice calls the Wallet microservice via gRPC to delete all associated transactions.
+
+The gRPC client:
+- Sends an internal JWT in metadata (`Authorization: Bearer <token>`).
+- Applies resiliency with deadline (2s), retries (2 attempts, exponential backoff), and a circuit breaker (opens after 5 failures, resets after 10s).
 
 ## Testing
 

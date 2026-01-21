@@ -4,6 +4,7 @@ import { TransactionType } from '../../src/domain/entities/Transaction.js';
 
 const createMockRepository = (): jest.Mocked<TransactionRepository> => ({
   create: jest.fn(),
+  createWithBalance: jest.fn(),
   findAll: jest.fn(),
   findById: jest.fn(),
   getBalance: jest.fn(),

@@ -3,22 +3,23 @@ import { CreateTransactionUseCase } from '../../application/usecases/CreateTrans
 import { GetTransactionsUseCase } from '../../application/usecases/GetTransactionsUseCase.js';
 import { GetBalanceUseCase } from '../../application/usecases/GetBalanceUseCase.js';
 import { TransactionType } from '../../domain/entities/Transaction.js';
+import { IdempotencyService } from '../../application/services/IdempotencyService.js';
 import {
-  createTransactionSchema,
-  getTransactionsQuerySchema,
   CreateTransactionBody,
   GetTransactionsQuery,
+  IdempotencyKeyHeader,
 } from '../../infrastructure/http/schemas/transactionSchemas.js';
 
 export class TransactionController {
   constructor(
     private readonly createTransactionUseCase: CreateTransactionUseCase,
     private readonly getTransactionsUseCase: GetTransactionsUseCase,
-    private readonly getBalanceUseCase: GetBalanceUseCase
+    private readonly getBalanceUseCase: GetBalanceUseCase,
+    private readonly idempotencyService: IdempotencyService
   ) {}
 
   async create(
-    request: FastifyRequest<{ Body: CreateTransactionBody }>,
+    request: FastifyRequest<{ Body: CreateTransactionBody; Headers: IdempotencyKeyHeader }>,
     reply: FastifyReply
   ): Promise<void> {
     const userId = request.user?.sub;
@@ -26,19 +27,38 @@ export class TransactionController {
     // Guaranteed by authMiddleware
     if (!userId) throw new Error('User context missing');
 
-    const transaction = await this.createTransactionUseCase.execute({
+    const idempotencyKey = request.headers['idempotency-key'];
+    const requestHash = this.idempotencyService.createRequestHash({
       userId,
       amount: request.body.amount,
-      type: request.body.type as TransactionType,
+      type: request.body.type,
     });
 
-    reply.status(201).send({
-      id: transaction.id,
-      user_id: transaction.userId,
-      amount: transaction.amount,
-      type: transaction.type,
-      created_at: transaction.createdAt.toISOString(),
+    const result = await this.idempotencyService.execute({
+      key: idempotencyKey,
+      scope: `transactions:create:${userId}`,
+      requestHash,
+      handler: async () => {
+        const transaction = await this.createTransactionUseCase.execute({
+          userId,
+          amount: request.body.amount,
+          type: request.body.type as TransactionType,
+        });
+
+        return {
+          statusCode: 201,
+          responseBody: {
+            id: transaction.id,
+            user_id: transaction.userId,
+            amount: transaction.amount,
+            type: transaction.type,
+            created_at: transaction.createdAt.toISOString(),
+          },
+        };
+      },
     });
+
+    reply.status(result.statusCode).send(result.responseBody);
   }
 
   async findAll(

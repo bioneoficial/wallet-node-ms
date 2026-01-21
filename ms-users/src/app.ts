@@ -9,6 +9,7 @@ import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import { prisma } from './infrastructure/database/prisma.js';
 import { PrismaUserRepository } from './infrastructure/database/PrismaUserRepository.js';
+import { PrismaIdempotencyRepository } from './infrastructure/database/PrismaIdempotencyRepository.js';
 import { createWalletGrpcClient } from './infrastructure/grpc/walletGrpcClient.js';
 import { CreateUserUseCase } from './application/usecases/CreateUserUseCase.js';
 import { GetUsersUseCase } from './application/usecases/GetUsersUseCase.js';
@@ -16,6 +17,7 @@ import { GetUserByIdUseCase } from './application/usecases/GetUserByIdUseCase.js
 import { UpdateUserUseCase } from './application/usecases/UpdateUserUseCase.js';
 import { DeleteUserUseCase } from './application/usecases/DeleteUserUseCase.js';
 import { AuthenticateUserUseCase } from './application/usecases/AuthenticateUserUseCase.js';
+import { IdempotencyService } from './application/services/IdempotencyService.js';
 import { UserController } from './presentation/controllers/UserController.js';
 import { AuthController } from './presentation/controllers/AuthController.js';
 import { userRoutes } from './presentation/routes/userRoutes.js';
@@ -95,6 +97,8 @@ export async function buildApp() {
   app.setErrorHandler(globalErrorHandler);
 
   const userRepository = new PrismaUserRepository(prisma);
+  const idempotencyRepository = new PrismaIdempotencyRepository(prisma);
+  const idempotencyService = new IdempotencyService(idempotencyRepository);
   const walletClient = createWalletGrpcClient(env.WALLET_GRPC_URL, env.JWT_INTERNAL_SECRET);
 
   const createUserUseCase = new CreateUserUseCase(userRepository);
@@ -111,7 +115,8 @@ export async function buildApp() {
     getUsersUseCase,
     getUserByIdUseCase,
     updateUserUseCase,
-    deleteUserUseCase
+    deleteUserUseCase,
+    idempotencyService
   );
 
   const authController = new AuthController(authenticateUserUseCase);

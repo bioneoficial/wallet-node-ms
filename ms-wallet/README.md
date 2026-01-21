@@ -93,6 +93,15 @@ docker run -p 3001:3001 -p 50051:50051 --env-file .env ms-wallet
 | `GET` | `/health` | Health check | - |
 | `GET` | `/docs` | Swagger documentation | - |
 
+### Idempotency
+
+Write operations require the `Idempotency-Key` header:
+
+- `POST /transactions`
+- Reusing the same key with the same payload returns the stored response.
+- Reusing the same key with a different payload returns `409 Conflict`.
+- If the request is already being processed, the API returns `409 Conflict`.
+
 ## gRPC Services
 
 The microservice exposes a gRPC server on port 50051 for internal communication:
@@ -101,6 +110,25 @@ The microservice exposes a gRPC server on port 50051 for internal communication:
 - `GetTransactions` - Get user transactions
 - `CreateTransaction` - Create a transaction
 - `DeleteUserTransactions` - Delete all user transactions
+
+### Security (TLS/mTLS)
+
+gRPC communication is secured with mutual TLS (mTLS):
+- Server certificate validates the wallet service identity
+- Client certificate validates the calling service (ms-users)
+- CA certificate ensures trust chain
+- JWT tokens in metadata provide additional authentication
+
+**Development:** Self-signed certificates are stored in `/certs`.  
+**Production:** Use certificates from a trusted CA and store private keys securely (e.g., Vault, Kubernetes secrets).
+
+### Balance Consistency
+
+The service uses a **cached balance strategy** for performance and consistency:
+- Transactions are stored as an append-only event log
+- Each transaction creation atomically updates a `Balance` table
+- Balance queries read directly from the cached value
+- This approach prevents race conditions and improves read performance
 
 ## Testing
 

@@ -1,5 +1,6 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
+import * as fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { CreateTransactionUseCase } from '../../application/usecases/CreateTransactionUseCase.js';

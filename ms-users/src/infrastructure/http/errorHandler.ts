@@ -55,6 +55,30 @@ export function globalErrorHandler(
     return;
   }
 
+  if (error.message === 'Idempotency key is required') {
+    reply.status(400).send({
+      error: 'Bad Request',
+      message: error.message,
+    });
+    return;
+  }
+
+  if (error.message === 'Idempotency key conflict') {
+    reply.status(409).send({
+      error: 'Conflict',
+      message: 'Idempotency key does not match the request payload',
+    });
+    return;
+  }
+
+  if (error.message === 'Idempotency key in progress') {
+    reply.status(409).send({
+      error: 'Conflict',
+      message: 'Idempotency key is already being processed',
+    });
+    return;
+  }
+
   if (error.statusCode === 401) {
     reply.status(401).send({
       error: 'Unauthorized',

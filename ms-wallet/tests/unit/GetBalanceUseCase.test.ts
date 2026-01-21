@@ -3,6 +3,7 @@ import { TransactionRepository } from '../../src/domain/repositories/Transaction
 
 const createMockRepository = (): jest.Mocked<TransactionRepository> => ({
   create: jest.fn(),
+  createWithBalance: jest.fn(),
   findAll: jest.fn(),
   findById: jest.fn(),
   getBalance: jest.fn(),

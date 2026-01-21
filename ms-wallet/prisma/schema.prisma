@@ -24,3 +24,29 @@ model Transaction {
   @@index([type])
   @@map("transactions")
 }
+
+model Balance {
+  id        String   @id @default(uuid())
+  userId    String   @unique @map("user_id")
+  amount    Decimal  @default(0) @db.Decimal(10, 2)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("balances")
+}
+
+model IdempotencyKey {
+  id           String   @id @default(uuid())
+  key          String
+  scope        String
+  requestHash  String   @map("request_hash")
+  statusCode   Int?     @map("status_code")
+  responseBody Json?    @map("response_body")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([scope, key], name: "scope_key")
+  @@index([key])
+  @@map("idempotency_keys")
+}

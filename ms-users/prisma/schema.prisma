@@ -18,3 +18,18 @@ model User {
 
   @@map("users")
 }
+
+model IdempotencyKey {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  key          String
+  scope        String
+  requestHash  String   @map("request_hash")
+  statusCode   Int?     @map("status_code")
+  responseBody Json?    @map("response_body")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([scope, key], name: "scope_key")
+  @@index([key])
+  @@map("idempotency_keys")
+}

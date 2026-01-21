@@ -9,6 +9,6 @@ export class CreateTransactionUseCase {
       throw new Error('Amount must be greater than zero');
     }
 
-    return this.transactionRepository.create(input);
+    return this.transactionRepository.createWithBalance(input);
   }
 }

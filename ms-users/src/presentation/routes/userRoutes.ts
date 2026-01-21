@@ -6,6 +6,7 @@ import { authMiddleware } from '../middlewares/authMiddleware.js';
 import {
   createUserSchema,
   updateUserSchema,
+  idempotencyKeyHeaderSchema,
 } from '../../infrastructure/http/schemas/userSchemas.js';
 
 const userResponseSchema = z.object({
@@ -33,8 +34,11 @@ export async function userRoutes(
         description: 'Create a new user',
         tags: ['Users'],
         body: createUserSchema,
+        headers: idempotencyKeyHeaderSchema,
         response: {
           201: userResponseSchema,
+          400: errorResponseSchema,
+          409: errorResponseSchema,
         },
       },
     },
@@ -84,8 +88,10 @@ export async function userRoutes(
         description: 'Update authenticated user profile',
         tags: ['Users'],
         body: updateUserSchema,
+        headers: idempotencyKeyHeaderSchema,
         response: {
           200: userResponseSchema,
+          400: errorResponseSchema,
           401: errorResponseSchema,
           404: errorResponseSchema,
           409: errorResponseSchema,
@@ -103,10 +109,13 @@ export async function userRoutes(
       schema: {
         description: 'Delete authenticated user profile',
         tags: ['Users'],
+        headers: idempotencyKeyHeaderSchema,
         response: {
           204: z.null(),
+          400: errorResponseSchema,
           401: errorResponseSchema,
           404: errorResponseSchema,
+          409: errorResponseSchema,
         },
         security: [{ bearerAuth: [] }],
       },

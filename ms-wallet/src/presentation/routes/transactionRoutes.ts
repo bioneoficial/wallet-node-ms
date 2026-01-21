@@ -3,7 +3,16 @@ import { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { TransactionController } from '../controllers/TransactionController.js';
 import { authMiddleware } from '../middlewares/authMiddleware.js';
-import { createTransactionSchema, getTransactionsQuerySchema } from '../../infrastructure/http/schemas/transactionSchemas.js';
+import {
+  createTransactionSchema,
+  getTransactionsQuerySchema,
+  idempotencyKeyHeaderSchema,
+} from '../../infrastructure/http/schemas/transactionSchemas.js';
+
+const errorResponseSchema = z.object({
+  error: z.string(),
+  message: z.string(),
+});
 
 export async function transactionRoutes(
   fastify: FastifyInstance,
@@ -19,6 +28,7 @@ export async function transactionRoutes(
         description: 'Create a new transaction',
         tags: ['Transactions'],
         body: createTransactionSchema,
+        headers: idempotencyKeyHeaderSchema,
         response: {
           201: z.object({
             id: z.string(),
@@ -27,6 +37,9 @@ export async function transactionRoutes(
             type: z.enum(['CREDIT', 'DEBIT']),
             created_at: z.string(),
           }),
+          400: errorResponseSchema,
+          401: errorResponseSchema,
+          409: errorResponseSchema,
         },
         security: [{ bearerAuth: [] }],
       },

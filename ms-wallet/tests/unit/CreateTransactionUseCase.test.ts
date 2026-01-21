@@ -4,6 +4,7 @@ import { TransactionType } from '../../src/domain/entities/Transaction.js';
 
 const createMockRepository = (): jest.Mocked<TransactionRepository> => ({
   create: jest.fn(),
+  createWithBalance: jest.fn(),
   findAll: jest.fn(),
   findById: jest.fn(),
   getBalance: jest.fn(),
@@ -35,13 +36,13 @@ describe('CreateTransactionUseCase', () => {
       updatedAt: new Date(),
     };
 
-    mockRepository.create.mockResolvedValue(expectedTransaction);
+    mockRepository.createWithBalance.mockResolvedValue(expectedTransaction);
 
     const result = await useCase.execute(input);
 
     expect(result).toEqual(expectedTransaction);
-    expect(mockRepository.create).toHaveBeenCalledWith(input);
-    expect(mockRepository.create).toHaveBeenCalledTimes(1);
+    expect(mockRepository.createWithBalance).toHaveBeenCalledWith(input);
+    expect(mockRepository.createWithBalance).toHaveBeenCalledTimes(1);
   });
 
   it('should create a debit transaction successfully', async () => {
@@ -60,12 +61,12 @@ describe('CreateTransactionUseCase', () => {
       updatedAt: new Date(),
     };
 
-    mockRepository.create.mockResolvedValue(expectedTransaction);
+    mockRepository.createWithBalance.mockResolvedValue(expectedTransaction);
 
     const result = await useCase.execute(input);
 
     expect(result).toEqual(expectedTransaction);
-    expect(mockRepository.create).toHaveBeenCalledWith(input);
+    expect(mockRepository.createWithBalance).toHaveBeenCalledWith(input);
   });
 
   it('should throw error when amount is zero', async () => {
@@ -76,7 +77,7 @@ describe('CreateTransactionUseCase', () => {
     };
 
     await expect(useCase.execute(input)).rejects.toThrow('Amount must be greater than zero');
-    expect(mockRepository.create).not.toHaveBeenCalled();
+    expect(mockRepository.createWithBalance).not.toHaveBeenCalled();
   });
 
   it('should throw error when amount is negative', async () => {
@@ -87,6 +88,6 @@ describe('CreateTransactionUseCase', () => {
     };
 
     await expect(useCase.execute(input)).rejects.toThrow('Amount must be greater than zero');
-    expect(mockRepository.create).not.toHaveBeenCalled();
+    expect(mockRepository.createWithBalance).not.toHaveBeenCalled();
   });
 });
