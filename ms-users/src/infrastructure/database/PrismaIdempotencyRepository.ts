@@ -48,7 +48,7 @@ export class PrismaIdempotencyRepository implements IdempotencyRepository {
       where: { id },
       data: {
         statusCode,
-        responseBody,
+        responseBody: responseBody as any,
       },
     });
   }

@@ -44,11 +44,20 @@ export class PrismaIdempotencyRepository implements IdempotencyRepository {
   }
 
   async updateResponse(id: string, statusCode: number, responseBody: unknown | null): Promise<void> {
-    await this.prisma.idempotencyKey.update({
+    const existing = await this.prisma.idempotencyKey.findUnique({
       where: { id },
+    });
+
+    if (!existing) {
+      throw new Error('Idempotency key not found');
+    }
+
+    const updated = await this.prisma.idempotencyKey.update({
+      where: { id: existing.id },
       data: {
         statusCode,
-        responseBody,
+        responseBody: responseBody as any,
+        updatedAt: new Date(),
       },
     });
   }

@@ -11,9 +11,16 @@ module.exports = {
       'ts-jest',
       {
         useESM: true,
+        isolatedModules: true,
+        diagnostics: {
+          ignoreCodes: [1343, 2322, 2304],
+        },
         tsconfig: {
-          module: 'ESNext',
-          moduleResolution: 'node',
+          module: 'ES2022',
+          target: 'ES2022',
+          moduleResolution: 'Bundler',
+          esModuleInterop: true,
+          skipLibCheck: true,
         },
       },
     ],

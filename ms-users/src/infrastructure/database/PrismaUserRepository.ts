@@ -75,21 +75,14 @@ export class PrismaUserRepository implements UserRepository {
     }
   }
 
-  private mapToEntity(prismaUser: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    password: string;
-    createdAt: Date;
-    updatedAt: Date;
-  }): User {
+  private mapToEntity(prismaUser: any): User {
     return {
       id: prismaUser.id,
       firstName: prismaUser.firstName,
       lastName: prismaUser.lastName,
       email: prismaUser.email,
       password: prismaUser.password,
+      role: prismaUser.role as 'USER' | 'ADMIN',
       createdAt: prismaUser.createdAt,
       updatedAt: prismaUser.updatedAt,
     };

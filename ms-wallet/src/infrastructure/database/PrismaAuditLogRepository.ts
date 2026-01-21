@@ -10,7 +10,7 @@ export class PrismaAuditLogRepository implements AuditLogRepository {
         userId: record.userId,
         action: record.action,
         resource: record.resource,
-        metadata: record.metadata ?? null,
+        metadata: (record.metadata as any) ?? null,
         ipAddress: record.ipAddress ?? null,
         userAgent: record.userAgent ?? null,
       },
