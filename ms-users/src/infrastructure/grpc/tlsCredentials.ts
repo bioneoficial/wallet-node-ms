@@ -1,13 +1,14 @@
 import * as grpc from '@grpc/grpc-js';
 import * as fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import * as path from 'path';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Docker: /certs (volume mount), Local: ./certs
+const CERTS_DIR = fs.existsSync('/certs/ca-cert.pem') 
+  ? '/certs' 
+  : path.resolve(process.cwd(), 'certs');
 
 export function createClientCredentials(): grpc.ChannelCredentials {
-  const certsPath = path.resolve(__dirname, '../../../../../certs');
+  const certsPath = CERTS_DIR;
   
   try {
     const caCert = fs.readFileSync(path.join(certsPath, 'ca-cert.pem'));

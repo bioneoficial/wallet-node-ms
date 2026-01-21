@@ -1,7 +1,6 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { WalletGrpcClient } from '../../application/usecases/DeleteUserUseCase.js';
 import { createInternalJwt } from './internalJwt.js';
 import { createClientCredentials } from './tlsCredentials.js';
@@ -16,8 +15,8 @@ import {
   withRetry,
 } from './grpcResilience.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Proto file path - Docker: /app/proto, Local: ../proto from ms-users  
+const PROTO_PATH = path.resolve(process.cwd(), 'proto/wallet.proto');
 
 interface WalletServiceClient extends grpc.Client {
   GetBalance: (
@@ -59,9 +58,9 @@ export function createWalletGrpcClient(
     failureThreshold: config.circuitBreakerThreshold,
     resetTimeoutMs: config.circuitBreakerResetMs,
   });
-  const PROTO_PATH = path.resolve(__dirname, '../../../../proto/wallet.proto');
+  const protoPath = PROTO_PATH;
 
-  const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
+  const packageDefinition = protoLoader.loadSync(protoPath, {
     keepCase: true,
     longs: String,
     enums: String,

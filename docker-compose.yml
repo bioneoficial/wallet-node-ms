@@ -49,6 +49,7 @@ services:
   ms-wallet:
     build:
       context: ./ms-wallet
+      dockerfile: Dockerfile
       target: development
     container_name: ms-wallet
     environment:
@@ -61,14 +62,15 @@ services:
     ports:
       - "3001:3001"
       - "50051:50051"
-    depends_on:
-      postgres:
-        condition: service_healthy
     volumes:
       - ./ms-wallet:/app
       - /app/node_modules
-      - ./proto:/app/../proto
-    command: sh -c "npx prisma migrate dev --name init && npm run dev"
+      - ./proto:/app/proto
+      - ./certs:/certs:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: npm run dev
 
   ms-users:
     build:
@@ -94,7 +96,8 @@ services:
     volumes:
       - ./ms-users:/app
       - /app/node_modules
-      - ./proto:/app/../proto
+      - ./proto:/app/proto
+      - ./certs:/certs:ro
     command: sh -c "npx prisma db push && npm run dev"
 
 volumes:

@@ -32,7 +32,8 @@ export function createWalletGrpcServer(
   internalSecret: string,
   logger: Logger
 ): grpc.Server {
-  const PROTO_PATH = path.resolve(__dirname, '../../../../proto/wallet.proto');
+  // Docker: /app/proto (volume mount), Local: ../proto
+  const PROTO_PATH = path.resolve(process.cwd(), 'proto/wallet.proto');
 
   const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
     keepCase: true,

@@ -6,6 +6,10 @@ module.exports = {
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
+  globals: {
+    __filename: 'mock',
+    __dirname: 'mock',
+  },
   transform: {
     '^.+\\.tsx?$': [
       'ts-jest',
@@ -13,7 +17,7 @@ module.exports = {
         useESM: true,
         isolatedModules: true,
         diagnostics: {
-          ignoreCodes: [1343, 2322, 2304],
+          ignoreCodes: [1343, 2322, 2304, 2451],
         },
         tsconfig: {
           module: 'ES2022',
