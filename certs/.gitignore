@@ -1,0 +1,11 @@
+# Private keys should not be committed in production
+# For dev/test, we keep them for convenience
+# ca-key.pem
+# server-key.pem
+# client-key.pem
+
+# Certificate requests (not needed after signing)
+*.pem.req
+server-req.pem
+client-req.pem
+*.srl

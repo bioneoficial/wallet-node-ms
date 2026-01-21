@@ -7,6 +7,7 @@ import { GetTransactionsUseCase } from './application/usecases/GetTransactionsUs
 import { GetBalanceUseCase } from './application/usecases/GetBalanceUseCase.js';
 import { DeleteUserTransactionsUseCase } from './application/usecases/DeleteUserTransactionsUseCase.js';
 import { createWalletGrpcServer } from './infrastructure/grpc/walletGrpcServer.js';
+import { createServerCredentials } from './infrastructure/grpc/tlsCredentials.js';
 import { env } from './config/env.js';
 import { pino } from 'pino';
 
@@ -53,15 +54,17 @@ async function startGrpcServer() {
   );
 
   return new Promise<grpc.Server>((resolve, reject) => {
+    const credentials = createServerCredentials();
+    
     grpcServer.bindAsync(
       `0.0.0.0:${env.GRPC_PORT}`,
-      grpc.ServerCredentials.createInsecure(),
+      credentials,
       (error, port) => {
         if (error) {
           reject(error);
           return;
         }
-        logger.info(`gRPC server running on port ${port}`);
+        logger.info(`gRPC server running on port ${port} with TLS enabled`);
         resolve(grpcServer);
       }
     );

@@ -1,46 +1,53 @@
 import { FastifyInstance } from 'fastify';
+import { ZodTypeProvider } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import { TransactionController } from '../controllers/TransactionController.js';
 import { authMiddleware } from '../middlewares/authMiddleware.js';
+import {
+  createTransactionSchema,
+  getTransactionsQuerySchema,
+  idempotencyKeyHeaderSchema,
+} from '../../infrastructure/http/schemas/transactionSchemas.js';
+
+const transactionResponseSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  amount: z.number(),
+  type: z.enum(['CREDIT', 'DEBIT']),
+  created_at: z.string(),
+});
+
+const errorResponseSchema = z.object({
+  error: z.string(),
+  message: z.string(),
+});
 
 export async function transactionRoutes(
   fastify: FastifyInstance,
   controller: TransactionController
 ): Promise<void> {
-  fastify.addHook('onRequest', authMiddleware);
+  const app = fastify.withTypeProvider<ZodTypeProvider>();
+  app.addHook('onRequest', authMiddleware);
 
-  fastify.post(
+  app.post(
     '/transactions',
     {
+      config: {
+        rateLimit: {
+          max: 20, // 20 transactions
+          timeWindow: '1 minute', // per minute
+        },
+      },
       schema: {
         description: 'Create a new transaction',
         tags: ['Transactions'],
-        body: {
-          type: 'object',
-          required: ['user_id', 'amount', 'type'],
-          properties: {
-            user_id: { type: 'string', format: 'uuid' },
-            amount: { type: 'integer', minimum: 1 },
-            type: { type: 'string', enum: ['CREDIT', 'DEBIT'] },
-          },
-        },
+        body: createTransactionSchema,
+        headers: idempotencyKeyHeaderSchema,
         response: {
-          201: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              user_id: { type: 'string' },
-              amount: { type: 'integer' },
-              type: { type: 'string' },
-              created_at: { type: 'string' },
-            },
-          },
-          401: {
-            type: 'object',
-            properties: {
-              error: { type: 'string' },
-              message: { type: 'string' },
-            },
-          },
+          201: transactionResponseSchema,
+          400: errorResponseSchema,
+          401: errorResponseSchema,
+          409: errorResponseSchema,
         },
         security: [{ bearerAuth: [] }],
       },
@@ -48,39 +55,27 @@ export async function transactionRoutes(
     controller.create.bind(controller)
   );
 
-  fastify.get(
+  app.get(
     '/transactions',
     {
       schema: {
         description: 'Get all transactions for the authenticated user',
         tags: ['Transactions'],
-        querystring: {
-          type: 'object',
-          properties: {
-            type: { type: 'string', enum: ['CREDIT', 'DEBIT'] },
-          },
-        },
+        querystring: getTransactionsQuerySchema,
         response: {
-          200: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                id: { type: 'string' },
-                user_id: { type: 'string' },
-                amount: { type: 'integer' },
-                type: { type: 'string' },
-                created_at: { type: 'string' },
-              },
-            },
-          },
-          401: {
-            type: 'object',
-            properties: {
-              error: { type: 'string' },
-              message: { type: 'string' },
-            },
-          },
+          200: z.array(
+            z.object({
+              id: z.string(),
+              user_id: z.string(),
+              amount: z.number(),
+              type: z.string(),
+              created_at: z.string(),
+            })
+          ),
+          401: z.object({
+            error: z.string(),
+            message: z.string(),
+          }),
         },
         security: [{ bearerAuth: [] }],
       },
@@ -88,26 +83,20 @@ export async function transactionRoutes(
     controller.findAll.bind(controller)
   );
 
-  fastify.get(
+  app.get(
     '/balance',
     {
       schema: {
         description: 'Get the balance for the authenticated user (calculated from CREDIT - DEBIT)',
         tags: ['Transactions'],
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              amount: { type: 'integer' },
-            },
-          },
-          401: {
-            type: 'object',
-            properties: {
-              error: { type: 'string' },
-              message: { type: 'string' },
-            },
-          },
+          200: z.object({
+            amount: z.number(),
+          }),
+          401: z.object({
+            error: z.string(),
+            message: z.string(),
+          }),
         },
         security: [{ bearerAuth: [] }],
       },

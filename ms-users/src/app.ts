@@ -1,4 +1,6 @@
-import Fastify, { FastifyInstance } from 'fastify';
+import Fastify from 'fastify';
+import { serializerCompiler, validatorCompiler, ZodTypeProvider, jsonSchemaTransform } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
@@ -7,6 +9,10 @@ import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import { prisma } from './infrastructure/database/prisma.js';
 import { PrismaUserRepository } from './infrastructure/database/PrismaUserRepository.js';
+import { PrismaIdempotencyRepository } from './infrastructure/database/PrismaIdempotencyRepository.js';
+import { PrismaAuditLogRepository } from './infrastructure/database/PrismaAuditLogRepository.js';
+import { IdempotencyService } from './application/services/IdempotencyService.js';
+import { AuditLogService } from './application/services/AuditLogService.js';
 import { createWalletGrpcClient } from './infrastructure/grpc/walletGrpcClient.js';
 import { CreateUserUseCase } from './application/usecases/CreateUserUseCase.js';
 import { GetUsersUseCase } from './application/usecases/GetUsersUseCase.js';
@@ -19,8 +25,9 @@ import { AuthController } from './presentation/controllers/AuthController.js';
 import { userRoutes } from './presentation/routes/userRoutes.js';
 import { authRoutes } from './presentation/routes/authRoutes.js';
 import { env } from './config/env.js';
+import { globalErrorHandler } from './infrastructure/http/errorHandler.js';
 
-export async function buildApp(): Promise<FastifyInstance> {
+export async function buildApp() {
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === 'development' ? 'debug' : 'info',
@@ -34,7 +41,30 @@ export async function buildApp(): Promise<FastifyInstance> {
             }
           : undefined,
     },
+  }).withTypeProvider<ZodTypeProvider>();
+
+  await app.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https:'],
+      },
+    },
   });
+
+  // Rate limiting (global)
+  await app.register(rateLimit, {
+    max: 100, // 100 requests per minute globally
+    timeWindow: '1 minute',
+    cache: 10000,
+    allowList: (req) => {
+      // Allow localhost and Docker internal IPs for E2E tests
+      return req.ip === '127.0.0.1' || req.ip === '::1' || req.ip.startsWith('192.168.');
+    },
+  });
+
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
 
   await app.register(cors, {
     origin: true,
@@ -75,6 +105,7 @@ export async function buildApp(): Promise<FastifyInstance> {
         },
       },
     },
+    transform: jsonSchemaTransform,
   });
 
   await app.register(fastifySwaggerUi, {
@@ -85,7 +116,14 @@ export async function buildApp(): Promise<FastifyInstance> {
     },
   });
 
+  app.setErrorHandler(globalErrorHandler);
+
   const userRepository = new PrismaUserRepository(prisma);
+  const idempotencyRepository = new PrismaIdempotencyRepository(prisma);
+  const idempotencyService = new IdempotencyService(idempotencyRepository);
+  
+  const auditLogRepository = new PrismaAuditLogRepository(prisma);
+  const auditLogService = new AuditLogService(auditLogRepository);
   const walletClient = createWalletGrpcClient(env.WALLET_GRPC_URL, env.JWT_INTERNAL_SECRET);
 
   const createUserUseCase = new CreateUserUseCase(userRepository);
@@ -94,7 +132,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   const updateUserUseCase = new UpdateUserUseCase(userRepository);
   const deleteUserUseCase = new DeleteUserUseCase(userRepository, walletClient);
   const authenticateUserUseCase = new AuthenticateUserUseCase(userRepository, {
-    sign: (payload: { sub: string; email: string }) => app.jwt.sign(payload, { expiresIn: '24h' }),
+    sign: (payload: { sub: string; email: string; role: string }) => app.jwt.sign(payload, { expiresIn: '24h' }),
   });
 
   const userController = new UserController(
@@ -102,7 +140,9 @@ export async function buildApp(): Promise<FastifyInstance> {
     getUsersUseCase,
     getUserByIdUseCase,
     updateUserUseCase,
-    deleteUserUseCase
+    deleteUserUseCase,
+    idempotencyService,
+    auditLogService
   );
 
   const authController = new AuthController(authenticateUserUseCase);
@@ -117,13 +157,10 @@ export async function buildApp(): Promise<FastifyInstance> {
       description: 'Health check endpoint',
       tags: ['Health'],
       response: {
-        200: {
-          type: 'object',
-          properties: {
-            status: { type: 'string' },
-            timestamp: { type: 'string' },
-          },
-        },
+        200: z.object({
+          status: z.string(),
+          timestamp: z.string(),
+        }),
       },
     },
   }, async () => {

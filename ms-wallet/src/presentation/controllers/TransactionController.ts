@@ -3,88 +3,104 @@ import { CreateTransactionUseCase } from '../../application/usecases/CreateTrans
 import { GetTransactionsUseCase } from '../../application/usecases/GetTransactionsUseCase.js';
 import { GetBalanceUseCase } from '../../application/usecases/GetBalanceUseCase.js';
 import { TransactionType } from '../../domain/entities/Transaction.js';
+import { IdempotencyService } from '../../application/services/IdempotencyService.js';
+import { AuditLogService } from '../../application/services/AuditLogService.js';
 import {
-  createTransactionSchema,
-  getTransactionsQuerySchema,
   CreateTransactionBody,
   GetTransactionsQuery,
+  IdempotencyKeyHeader,
 } from '../../infrastructure/http/schemas/transactionSchemas.js';
-import { ZodError } from 'zod';
 
 export class TransactionController {
   constructor(
     private readonly createTransactionUseCase: CreateTransactionUseCase,
     private readonly getTransactionsUseCase: GetTransactionsUseCase,
-    private readonly getBalanceUseCase: GetBalanceUseCase
+    private readonly getBalanceUseCase: GetBalanceUseCase,
+    private readonly idempotencyService: IdempotencyService,
+    private readonly auditLogService: AuditLogService
   ) {}
 
   async create(
-    request: FastifyRequest<{ Body: CreateTransactionBody }>,
+    request: FastifyRequest<{ Body: CreateTransactionBody; Headers: IdempotencyKeyHeader }>,
     reply: FastifyReply
   ): Promise<void> {
-    try {
-      const validated = createTransactionSchema.parse(request.body);
+    const userId = request.user?.sub;
 
-      const transaction = await this.createTransactionUseCase.execute({
-        userId: validated.user_id,
-        amount: validated.amount,
-        type: validated.type as TransactionType,
-      });
+    // Guaranteed by authMiddleware
+    if (!userId) throw new Error('User context missing');
 
-      reply.status(201).send({
-        id: transaction.id,
-        user_id: transaction.userId,
-        amount: transaction.amount,
-        type: transaction.type,
-        created_at: transaction.createdAt.toISOString(),
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        reply.status(400).send({ error: 'Validation Error', details: error.errors });
-        return;
-      }
-      throw error;
-    }
+    const idempotencyKey = request.headers['idempotency-key'];
+    const requestHash = this.idempotencyService.createRequestHash({
+      userId,
+      amount: request.body.amount,
+      type: request.body.type,
+    });
+
+    const result = await this.idempotencyService.execute({
+      key: idempotencyKey,
+      scope: `transactions:create:${userId}`,
+      requestHash,
+      handler: async () => {
+        const transaction = await this.createTransactionUseCase.execute({
+          userId,
+          amount: request.body.amount,
+          type: request.body.type as TransactionType,
+        });
+
+        await this.auditLogService.logTransactionCreated(
+          userId,
+          { transactionId: transaction.id, amount: transaction.amount, type: transaction.type },
+          request.ip,
+          request.headers['user-agent']
+        );
+
+        return {
+          statusCode: 201,
+          responseBody: {
+            id: transaction.id,
+            user_id: transaction.userId,
+            amount: transaction.amount,
+            type: transaction.type,
+            created_at: transaction.createdAt.toISOString(),
+          },
+        };
+      },
+    });
+
+    reply.status(result.statusCode).send(result.responseBody);
   }
 
   async findAll(
     request: FastifyRequest<{ Querystring: GetTransactionsQuery }>,
     reply: FastifyReply
   ): Promise<void> {
-    try {
-      const validated = getTransactionsQuerySchema.parse(request.query);
-      const userId = request.user?.sub;
+    const { type } = request.query;
+    const userId = request.user?.sub;
 
-      const transactions = await this.getTransactionsUseCase.execute({
-        userId,
-        type: validated.type as TransactionType | undefined,
-      });
+    // Guaranteed by authMiddleware
+    if (!userId) throw new Error('User context missing');
 
-      const response = transactions.map((t) => ({
-        id: t.id,
-        user_id: t.userId,
-        amount: t.amount,
-        type: t.type,
-        created_at: t.createdAt.toISOString(),
-      }));
+    const transactions = await this.getTransactionsUseCase.execute({
+      userId,
+      type: type as TransactionType | undefined,
+    });
 
-      reply.send(response);
-    } catch (error) {
-      if (error instanceof ZodError) {
-        reply.status(400).send({ error: 'Validation Error', details: error.errors });
-        return;
-      }
-      throw error;
-    }
+    const response = transactions.map((t) => ({
+      id: t.id,
+      user_id: t.userId,
+      amount: t.amount,
+      type: t.type,
+      created_at: t.createdAt.toISOString(),
+    }));
+
+    reply.send(response);
   }
 
   async getBalance(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     const userId = request.user?.sub;
 
-    if (!userId) {
-      reply.status(400).send({ error: 'User ID is required' });
-      return;
-    }
+    // Guaranteed by authMiddleware
+    if (!userId) throw new Error('User context missing');
 
     const balance = await this.getBalanceUseCase.execute(userId);
 

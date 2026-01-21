@@ -10,6 +10,7 @@ export interface BalanceResult {
 
 export interface TransactionRepository {
   create(input: CreateTransactionInput): Promise<Transaction>;
+  createWithBalance(input: CreateTransactionInput): Promise<Transaction>;
   findAll(filter?: TransactionFilter): Promise<Transaction[]>;
   findById(id: string): Promise<Transaction | null>;
   getBalance(userId: string): Promise<BalanceResult>;

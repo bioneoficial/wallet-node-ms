@@ -1,47 +1,46 @@
 import { FastifyInstance } from 'fastify';
+import { ZodTypeProvider } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import { AuthController } from '../controllers/AuthController.js';
+import { authSchema } from '../../infrastructure/http/schemas/userSchemas.js';
+
+const authResponseSchema = z.object({
+  user: z.object({
+    id: z.string(),
+    first_name: z.string(),
+    last_name: z.string(),
+    email: z.string(),
+  }),
+  access_token: z.string(),
+});
+
+const errorResponseSchema = z.object({
+  error: z.string(),
+  message: z.string(),
+});
 
 export async function authRoutes(
   fastify: FastifyInstance,
   controller: AuthController
 ): Promise<void> {
-  fastify.post(
+  const app = fastify.withTypeProvider<ZodTypeProvider>();
+
+  app.post(
     '/auth',
     {
+      config: {
+        rateLimit: {
+          max: 5, // 5 login attempts
+          timeWindow: '1 minute', // per minute
+        },
+      },
       schema: {
         description: 'Authenticate user and get access token',
         tags: ['Auth'],
-        body: {
-          type: 'object',
-          required: ['email', 'password'],
-          properties: {
-            email: { type: 'string', format: 'email' },
-            password: { type: 'string' },
-          },
-        },
+        body: authSchema,
         response: {
-          200: {
-            type: 'object',
-            properties: {
-              user: {
-                type: 'object',
-                properties: {
-                  id: { type: 'string' },
-                  first_name: { type: 'string' },
-                  last_name: { type: 'string' },
-                  email: { type: 'string' },
-                },
-              },
-              access_token: { type: 'string' },
-            },
-          },
-          401: {
-            type: 'object',
-            properties: {
-              error: { type: 'string' },
-              message: { type: 'string' },
-            },
-          },
+          200: authResponseSchema,
+          401: errorResponseSchema,
         },
       },
     },

@@ -1,5 +1,6 @@
 import * as grpc from '@grpc/grpc-js';
 import * as protoLoader from '@grpc/proto-loader';
+import * as fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { CreateTransactionUseCase } from '../../application/usecases/CreateTransactionUseCase.js';
@@ -7,6 +8,7 @@ import { GetTransactionsUseCase } from '../../application/usecases/GetTransactio
 import { GetBalanceUseCase } from '../../application/usecases/GetBalanceUseCase.js';
 import { DeleteUserTransactionsUseCase } from '../../application/usecases/DeleteUserTransactionsUseCase.js';
 import { TransactionType } from '../../domain/entities/Transaction.js';
+import { verifyInternalJwt, type InternalJwtPayload } from './internalJwt.js';
 import type { Logger } from 'pino';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -14,7 +16,6 @@ const __dirname = path.dirname(__filename);
 
 interface GrpcRequest {
   user_id?: string;
-  internal_token?: string;
   type?: string;
   amount?: number;
 }
@@ -31,7 +32,8 @@ export function createWalletGrpcServer(
   internalSecret: string,
   logger: Logger
 ): grpc.Server {
-  const PROTO_PATH = path.resolve(__dirname, '../../../../proto/wallet.proto');
+  // Docker: /app/proto (volume mount), Local: ../proto
+  const PROTO_PATH = path.resolve(process.cwd(), 'proto/wallet.proto');
 
   const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
     keepCase: true,
@@ -47,8 +49,52 @@ export function createWalletGrpcServer(
     };
   };
 
-  const validateInternalToken = (token: string): boolean => {
-    return token === internalSecret;
+  const getInternalToken = (metadata: grpc.Metadata): string | null => {
+    const rawHeader = metadata.get('authorization')[0];
+
+    if (typeof rawHeader !== 'string') return null;
+
+    return rawHeader.toLowerCase().startsWith('bearer ')
+      ? rawHeader.slice(7)
+      : rawHeader;
+  };
+
+  const authenticateInternalCall = (
+    metadata: grpc.Metadata,
+    userId?: string
+  ): { payload?: InternalJwtPayload; error?: grpc.ServiceError } => {
+    const token = getInternalToken(metadata);
+
+    if (!token) {
+      return {
+        error: {
+          code: grpc.status.UNAUTHENTICATED,
+          message: 'Missing internal token',
+        } as grpc.ServiceError,
+      };
+    }
+
+    try {
+      const payload = verifyInternalJwt(token, internalSecret);
+
+      if (userId && payload.sub !== userId) {
+        return {
+          error: {
+            code: grpc.status.PERMISSION_DENIED,
+            message: 'Token subject mismatch',
+          } as grpc.ServiceError,
+        };
+      }
+
+      return { payload };
+    } catch {
+      return {
+        error: {
+          code: grpc.status.UNAUTHENTICATED,
+          message: 'Invalid internal token',
+        } as grpc.ServiceError,
+      };
+    }
   };
 
   const server = new grpc.Server();
@@ -59,21 +105,20 @@ export function createWalletGrpcServer(
       callback: GrpcCallback<{ amount: number }>
     ) => {
       try {
-        const { user_id, internal_token } = call.request;
-
-        if (!internal_token || !validateInternalToken(internal_token)) {
-          callback({
-            code: grpc.status.UNAUTHENTICATED,
-            message: 'Invalid internal token',
-          } as grpc.ServiceError);
-          return;
-        }
+        const { user_id } = call.request;
 
         if (!user_id) {
           callback({
             code: grpc.status.INVALID_ARGUMENT,
             message: 'User ID is required',
           } as grpc.ServiceError);
+          return;
+        }
+
+        const authResult = authenticateInternalCall(call.metadata, user_id);
+
+        if (authResult.error) {
+          callback(authResult.error);
           return;
         }
 
@@ -93,13 +138,20 @@ export function createWalletGrpcServer(
       callback: GrpcCallback<{ transactions: unknown[] }>
     ) => {
       try {
-        const { user_id, type, internal_token } = call.request;
+        const { user_id, type } = call.request;
 
-        if (!internal_token || !validateInternalToken(internal_token)) {
+        if (!user_id) {
           callback({
-            code: grpc.status.UNAUTHENTICATED,
-            message: 'Invalid internal token',
+            code: grpc.status.INVALID_ARGUMENT,
+            message: 'User ID is required',
           } as grpc.ServiceError);
+          return;
+        }
+
+        const authResult = authenticateInternalCall(call.metadata, user_id);
+
+        if (authResult.error) {
+          callback(authResult.error);
           return;
         }
 
@@ -131,21 +183,20 @@ export function createWalletGrpcServer(
       callback: GrpcCallback<{ transaction: unknown }>
     ) => {
       try {
-        const { user_id, amount, type, internal_token } = call.request;
-
-        if (!internal_token || !validateInternalToken(internal_token)) {
-          callback({
-            code: grpc.status.UNAUTHENTICATED,
-            message: 'Invalid internal token',
-          } as grpc.ServiceError);
-          return;
-        }
+        const { user_id, amount, type } = call.request;
 
         if (!user_id || !amount || !type) {
           callback({
             code: grpc.status.INVALID_ARGUMENT,
             message: 'User ID, amount, and type are required',
           } as grpc.ServiceError);
+          return;
+        }
+
+        const authResult = authenticateInternalCall(call.metadata, user_id);
+
+        if (authResult.error) {
+          callback(authResult.error);
           return;
         }
 
@@ -178,21 +229,20 @@ export function createWalletGrpcServer(
       callback: GrpcCallback<{ success: boolean; deleted_count: number }>
     ) => {
       try {
-        const { user_id, internal_token } = call.request;
-
-        if (!internal_token || !validateInternalToken(internal_token)) {
-          callback({
-            code: grpc.status.UNAUTHENTICATED,
-            message: 'Invalid internal token',
-          } as grpc.ServiceError);
-          return;
-        }
+        const { user_id } = call.request;
 
         if (!user_id) {
           callback({
             code: grpc.status.INVALID_ARGUMENT,
             message: 'User ID is required',
           } as grpc.ServiceError);
+          return;
+        }
+
+        const authResult = authenticateInternalCall(call.metadata, user_id);
+
+        if (authResult.error) {
+          callback(authResult.error);
           return;
         }
 

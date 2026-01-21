@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
@@ -28,15 +26,30 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+      - ./mongo-keyfile:/tmp/mongo-keyfile:ro
+      - ./mongo-entrypoint-custom.sh:/mongo-entrypoint-custom.sh:ro
+    entrypoint: ["bash", "/mongo-entrypoint-custom.sh"]
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  mongo-init:
+    image: mongo:7
+    container_name: mongo-init
+    depends_on:
+      mongo:
+        condition: service_healthy
+    volumes:
+      - ./mongo-init.sh:/mongo-init.sh
+    entrypoint: ["bash", "/mongo-init.sh"]
+    restart: "no"
+
   ms-wallet:
     build:
       context: ./ms-wallet
+      dockerfile: Dockerfile
       target: development
     container_name: ms-wallet
     environment:
@@ -49,14 +62,15 @@ services:
     ports:
       - "3001:3001"
       - "50051:50051"
-    depends_on:
-      postgres:
-        condition: service_healthy
     volumes:
       - ./ms-wallet:/app
       - /app/node_modules
-      - ./proto:/app/../proto
-    command: sh -c "npx prisma migrate dev --name init && npm run dev"
+      - ./proto:/app/proto
+      - ./certs:/certs:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: npm run dev
 
   ms-users:
     build:
@@ -64,7 +78,7 @@ services:
       target: development
     container_name: ms-users
     environment:
-      DATABASE_URL: mongodb://mongo:mongo@mongo:27017/users_db?authSource=admin
+      DATABASE_URL: mongodb://mongo:mongo@mongo:27017/users_db?authSource=admin&replicaSet=rs0
       JWT_SECRET: ILIACHALLENGE
       JWT_INTERNAL_SECRET: ILIACHALLENGE_INTERNAL
       PORT: 3002
@@ -75,12 +89,15 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
+      mongo-init:
+        condition: service_completed_successfully
       ms-wallet:
         condition: service_started
     volumes:
       - ./ms-users:/app
       - /app/node_modules
-      - ./proto:/app/../proto
+      - ./proto:/app/proto
+      - ./certs:/certs:ro
     command: sh -c "npx prisma db push && npm run dev"
 
 volumes:

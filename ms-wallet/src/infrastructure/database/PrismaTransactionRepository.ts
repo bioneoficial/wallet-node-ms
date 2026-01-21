@@ -25,6 +25,33 @@ export class PrismaTransactionRepository implements TransactionRepository {
     return this.mapToEntity(transaction);
   }
 
+  async createWithBalance(input: CreateTransactionInput): Promise<Transaction> {
+    return await this.prisma.$transaction(async (tx) => {
+      const transaction = await tx.transaction.create({
+        data: {
+          userId: input.userId,
+          amount: input.amount,
+          type: input.type as PrismaTransactionType,
+        },
+      });
+
+      const delta = input.type === 'CREDIT' ? input.amount : -input.amount;
+
+      await tx.balance.upsert({
+        where: { userId: input.userId },
+        update: {
+          amount: { increment: delta },
+        },
+        create: {
+          userId: input.userId,
+          amount: delta,
+        },
+      });
+
+      return this.mapToEntity(transaction);
+    });
+  }
+
   async findAll(filter?: TransactionFilter): Promise<Transaction[]> {
     const where: Record<string, unknown> = {};
 
@@ -53,18 +80,12 @@ export class PrismaTransactionRepository implements TransactionRepository {
   }
 
   async getBalance(userId: string): Promise<BalanceResult> {
-    const result = await this.prisma.$queryRaw<{ amount: bigint }[]>`
-      SELECT 
-        COALESCE(
-          SUM(CASE WHEN type = 'CREDIT' THEN amount ELSE -amount END),
-          0
-        ) as amount
-      FROM transactions
-      WHERE user_id = ${userId}
-    `;
+    const balance = await this.prisma.balance.findUnique({
+      where: { userId },
+    });
 
     return {
-      amount: Number(result[0]?.amount ?? 0),
+      amount: balance ? Number(balance.amount) : 0,
     };
   }
 
@@ -80,7 +101,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
     prismaTransaction: {
       id: string;
       userId: string;
-      amount: number;
+      amount: any;
       type: PrismaTransactionType;
       createdAt: Date;
       updatedAt: Date;
@@ -89,7 +110,7 @@ export class PrismaTransactionRepository implements TransactionRepository {
     return {
       id: prismaTransaction.id,
       userId: prismaTransaction.userId,
-      amount: prismaTransaction.amount,
+      amount: Number(prismaTransaction.amount),
       type: prismaTransaction.type as TransactionType,
       createdAt: prismaTransaction.createdAt,
       updatedAt: prismaTransaction.updatedAt,

@@ -1,4 +1,6 @@
 import Fastify, { FastifyInstance } from 'fastify';
+import { serializerCompiler, validatorCompiler, ZodTypeProvider, jsonSchemaTransform } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
@@ -7,14 +9,19 @@ import fastifySwagger from '@fastify/swagger';
 import fastifySwaggerUi from '@fastify/swagger-ui';
 import { prisma } from './infrastructure/database/prisma.js';
 import { PrismaTransactionRepository } from './infrastructure/database/PrismaTransactionRepository.js';
+import { PrismaIdempotencyRepository } from './infrastructure/database/PrismaIdempotencyRepository.js';
+import { PrismaAuditLogRepository } from './infrastructure/database/PrismaAuditLogRepository.js';
 import { CreateTransactionUseCase } from './application/usecases/CreateTransactionUseCase.js';
 import { GetTransactionsUseCase } from './application/usecases/GetTransactionsUseCase.js';
 import { GetBalanceUseCase } from './application/usecases/GetBalanceUseCase.js';
+import { IdempotencyService } from './application/services/IdempotencyService.js';
+import { AuditLogService } from './application/services/AuditLogService.js';
 import { TransactionController } from './presentation/controllers/TransactionController.js';
 import { transactionRoutes } from './presentation/routes/transactionRoutes.js';
 import { env } from './config/env.js';
+import { globalErrorHandler } from './infrastructure/http/errorHandler.js';
 
-export async function buildApp(): Promise<FastifyInstance> {
+export async function buildApp() {
   const app = Fastify({
     logger: {
       level: env.NODE_ENV === 'development' ? 'debug' : 'info',
@@ -28,7 +35,30 @@ export async function buildApp(): Promise<FastifyInstance> {
             }
           : undefined,
     },
+  }).withTypeProvider<ZodTypeProvider>();
+
+  await app.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https:'],
+      },
+    },
   });
+
+  // Rate limiting (global)
+  await app.register(rateLimit, {
+    max: 100, // 100 requests per minute globally
+    timeWindow: '1 minute',
+    cache: 10000,
+    allowList: (req) => {
+      // Allow localhost and Docker internal IPs for E2E tests
+      return req.ip === '127.0.0.1' || req.ip === '::1' || req.ip.startsWith('192.168.');
+    },
+  });
+
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
 
   await app.register(cors, {
     origin: true,
@@ -69,6 +99,7 @@ export async function buildApp(): Promise<FastifyInstance> {
         },
       },
     },
+    transform: jsonSchemaTransform,
   });
 
   await app.register(fastifySwaggerUi, {
@@ -79,7 +110,14 @@ export async function buildApp(): Promise<FastifyInstance> {
     },
   });
 
+  app.setErrorHandler(globalErrorHandler);
+
   const transactionRepository = new PrismaTransactionRepository(prisma);
+  const idempotencyRepository = new PrismaIdempotencyRepository(prisma);
+  const idempotencyService = new IdempotencyService(idempotencyRepository);
+  
+  const auditLogRepository = new PrismaAuditLogRepository(prisma);
+  const auditLogService = new AuditLogService(auditLogRepository);
   const createTransactionUseCase = new CreateTransactionUseCase(transactionRepository);
   const getTransactionsUseCase = new GetTransactionsUseCase(transactionRepository);
   const getBalanceUseCase = new GetBalanceUseCase(transactionRepository);
@@ -87,7 +125,9 @@ export async function buildApp(): Promise<FastifyInstance> {
   const transactionController = new TransactionController(
     createTransactionUseCase,
     getTransactionsUseCase,
-    getBalanceUseCase
+    getBalanceUseCase,
+    idempotencyService,
+    auditLogService
   );
 
   await app.register(async (instance) => {
@@ -99,13 +139,10 @@ export async function buildApp(): Promise<FastifyInstance> {
       description: 'Health check endpoint',
       tags: ['Health'],
       response: {
-        200: {
-          type: 'object',
-          properties: {
-            status: { type: 'string' },
-            timestamp: { type: 'string' },
-          },
-        },
+        200: z.object({
+          status: z.string(),
+          timestamp: z.string(),
+        }),
       },
     },
   }, async () => {

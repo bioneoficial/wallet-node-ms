@@ -19,11 +19,13 @@ export const authSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
-export const userIdParamSchema = z.object({
-  id: z.string().min(1, 'User ID is required'),
-});
+export const idempotencyKeyHeaderSchema = z
+  .object({
+    'idempotency-key': z.string().min(1, 'Idempotency key is required'),
+  })
+  .passthrough();
 
 export type CreateUserBody = z.infer<typeof createUserSchema>;
 export type UpdateUserBody = z.infer<typeof updateUserSchema>;
 export type AuthBody = z.infer<typeof authSchema>;
-export type UserIdParam = z.infer<typeof userIdParamSchema>;
+export type IdempotencyKeyHeader = z.infer<typeof idempotencyKeyHeaderSchema>;

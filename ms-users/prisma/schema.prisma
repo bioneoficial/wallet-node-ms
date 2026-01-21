@@ -7,14 +7,51 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  USER
+  ADMIN
+}
+
 model User {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   firstName String   @map("first_name")
   lastName  String   @map("last_name")
   email     String   @unique
   password  String
+  role      Role     @default(USER)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("users")
+}
+
+model AuditLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @map("user_id")
+  action    String
+  resource  String
+  metadata  Json?
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model IdempotencyKey {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  key          String
+  scope        String
+  requestHash  String   @map("request_hash")
+  statusCode   Int?     @map("status_code")
+  responseBody Json?    @map("response_body")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([scope, key], name: "scope_key")
+  @@index([key])
+  @@map("idempotency_keys")
 }
