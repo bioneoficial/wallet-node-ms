@@ -32,7 +32,8 @@ describe('DeleteUserUseCase', () => {
       firstName: 'John',
       lastName: 'Doe',
       email: 'john@example.com',
-      password: 'hashed',
+      password: 'hashed-password',
+      role: 'USER' as const,
       createdAt: new Date(),
       updatedAt: new Date(),
     };

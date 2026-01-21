@@ -10,6 +10,9 @@ import fastifySwaggerUi from '@fastify/swagger-ui';
 import { prisma } from './infrastructure/database/prisma.js';
 import { PrismaUserRepository } from './infrastructure/database/PrismaUserRepository.js';
 import { PrismaIdempotencyRepository } from './infrastructure/database/PrismaIdempotencyRepository.js';
+import { PrismaAuditLogRepository } from './infrastructure/database/PrismaAuditLogRepository.js';
+import { IdempotencyService } from './application/services/IdempotencyService.js';
+import { AuditLogService } from './application/services/AuditLogService.js';
 import { createWalletGrpcClient } from './infrastructure/grpc/walletGrpcClient.js';
 import { CreateUserUseCase } from './application/usecases/CreateUserUseCase.js';
 import { GetUsersUseCase } from './application/usecases/GetUsersUseCase.js';
@@ -17,7 +20,6 @@ import { GetUserByIdUseCase } from './application/usecases/GetUserByIdUseCase.js
 import { UpdateUserUseCase } from './application/usecases/UpdateUserUseCase.js';
 import { DeleteUserUseCase } from './application/usecases/DeleteUserUseCase.js';
 import { AuthenticateUserUseCase } from './application/usecases/AuthenticateUserUseCase.js';
-import { IdempotencyService } from './application/services/IdempotencyService.js';
 import { UserController } from './presentation/controllers/UserController.js';
 import { AuthController } from './presentation/controllers/AuthController.js';
 import { userRoutes } from './presentation/routes/userRoutes.js';
@@ -99,6 +101,9 @@ export async function buildApp() {
   const userRepository = new PrismaUserRepository(prisma);
   const idempotencyRepository = new PrismaIdempotencyRepository(prisma);
   const idempotencyService = new IdempotencyService(idempotencyRepository);
+  
+  const auditLogRepository = new PrismaAuditLogRepository(prisma);
+  const auditLogService = new AuditLogService(auditLogRepository);
   const walletClient = createWalletGrpcClient(env.WALLET_GRPC_URL, env.JWT_INTERNAL_SECRET);
 
   const createUserUseCase = new CreateUserUseCase(userRepository);
@@ -107,7 +112,7 @@ export async function buildApp() {
   const updateUserUseCase = new UpdateUserUseCase(userRepository);
   const deleteUserUseCase = new DeleteUserUseCase(userRepository, walletClient);
   const authenticateUserUseCase = new AuthenticateUserUseCase(userRepository, {
-    sign: (payload: { sub: string; email: string }) => app.jwt.sign(payload, { expiresIn: '24h' }),
+    sign: (payload: { sub: string; email: string; role: string }) => app.jwt.sign(payload, { expiresIn: '24h' }),
   });
 
   const userController = new UserController(
@@ -116,7 +121,8 @@ export async function buildApp() {
     getUserByIdUseCase,
     updateUserUseCase,
     deleteUserUseCase,
-    idempotencyService
+    idempotencyService,
+    auditLogService
   );
 
   const authController = new AuthController(authenticateUserUseCase);

@@ -4,6 +4,7 @@ import { GetTransactionsUseCase } from '../../application/usecases/GetTransactio
 import { GetBalanceUseCase } from '../../application/usecases/GetBalanceUseCase.js';
 import { TransactionType } from '../../domain/entities/Transaction.js';
 import { IdempotencyService } from '../../application/services/IdempotencyService.js';
+import { AuditLogService } from '../../application/services/AuditLogService.js';
 import {
   CreateTransactionBody,
   GetTransactionsQuery,
@@ -15,7 +16,8 @@ export class TransactionController {
     private readonly createTransactionUseCase: CreateTransactionUseCase,
     private readonly getTransactionsUseCase: GetTransactionsUseCase,
     private readonly getBalanceUseCase: GetBalanceUseCase,
-    private readonly idempotencyService: IdempotencyService
+    private readonly idempotencyService: IdempotencyService,
+    private readonly auditLogService: AuditLogService
   ) {}
 
   async create(
@@ -44,6 +46,13 @@ export class TransactionController {
           amount: request.body.amount,
           type: request.body.type as TransactionType,
         });
+
+        await this.auditLogService.logTransactionCreated(
+          userId,
+          { transactionId: transaction.id, amount: transaction.amount, type: transaction.type },
+          request.ip,
+          request.headers['user-agent']
+        );
 
         return {
           statusCode: 201,

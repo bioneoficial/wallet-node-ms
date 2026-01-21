@@ -4,6 +4,7 @@ export interface User {
   lastName: string;
   email: string;
   password: string;
+  role: 'USER' | 'ADMIN';
   createdAt: Date;
   updatedAt: Date;
 }

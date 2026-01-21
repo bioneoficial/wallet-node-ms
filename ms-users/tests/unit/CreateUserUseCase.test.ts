@@ -37,6 +37,7 @@ describe('CreateUserUseCase', () => {
       lastName: input.lastName,
       email: input.email,
       password: 'hashed_password',
+      role: 'USER' as const,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -65,6 +66,7 @@ describe('CreateUserUseCase', () => {
       lastName: 'User',
       email: input.email,
       password: 'hashed',
+      role: 'USER' as const,
       createdAt: new Date(),
       updatedAt: new Date(),
     };

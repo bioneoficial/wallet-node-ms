@@ -3,6 +3,7 @@ import { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { UserController } from '../controllers/UserController.js';
 import { authMiddleware } from '../middlewares/authMiddleware.js';
+import { requireRole } from '../middlewares/requireRole.js';
 import {
   createUserSchema,
   updateUserSchema,
@@ -48,13 +49,14 @@ export async function userRoutes(
   app.get(
     '/users',
     {
-      onRequest: [authMiddleware],
+      onRequest: [authMiddleware, requireRole(['ADMIN'])],
       schema: {
-        description: 'Get all users',
+        description: 'Get all users (Admin only)',
         tags: ['Users'],
         response: {
           200: z.array(userResponseSchema),
           401: errorResponseSchema,
+          403: errorResponseSchema,
         },
         security: [{ bearerAuth: [] }],
       },

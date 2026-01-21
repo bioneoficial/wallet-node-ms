@@ -8,7 +8,7 @@ export interface AuthResult {
 }
 
 export interface TokenGenerator {
-  sign(payload: { sub: string; email: string }): string;
+  sign(payload: { sub: string; email: string; role: string }): string;
 }
 
 export class AuthenticateUserUseCase {
@@ -33,6 +33,7 @@ export class AuthenticateUserUseCase {
     const accessToken = this.tokenGenerator.sign({
       sub: user.id,
       email: user.email,
+      role: user.role,
     });
 
     return {

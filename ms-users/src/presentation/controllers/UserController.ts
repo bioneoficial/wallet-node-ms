@@ -5,6 +5,7 @@ import { GetUserByIdUseCase } from '../../application/usecases/GetUserByIdUseCas
 import { UpdateUserUseCase } from '../../application/usecases/UpdateUserUseCase.js';
 import { DeleteUserUseCase } from '../../application/usecases/DeleteUserUseCase.js';
 import { IdempotencyService } from '../../application/services/IdempotencyService.js';
+import { AuditLogService } from '../../application/services/AuditLogService.js';
 import {
   CreateUserBody,
   UpdateUserBody,
@@ -33,7 +34,8 @@ export class UserController {
     private readonly getUserByIdUseCase: GetUserByIdUseCase,
     private readonly updateUserUseCase: UpdateUserUseCase,
     private readonly deleteUserUseCase: DeleteUserUseCase,
-    private readonly idempotencyService: IdempotencyService
+    private readonly idempotencyService: IdempotencyService,
+    private readonly auditLogService: AuditLogService
   ) {}
 
   async create(
@@ -59,6 +61,13 @@ export class UserController {
           email: request.body.email,
           password: request.body.password,
         });
+
+        await this.auditLogService.logUserCreated(
+          user.id,
+          { email: user.email },
+          request.ip,
+          request.headers['user-agent']
+        );
 
         return {
           statusCode: 201,
@@ -150,6 +159,13 @@ export class UserController {
           };
         }
 
+        await this.auditLogService.logUserUpdated(
+          user.id,
+          { email: user.email },
+          request.ip,
+          request.headers['user-agent']
+        );
+
         return {
           statusCode: 200,
           responseBody: {
@@ -192,6 +208,13 @@ export class UserController {
             responseBody: { error: 'Not Found', message: 'User not found' },
           };
         }
+
+        await this.auditLogService.logUserDeleted(
+          userId,
+          {},
+          request.ip,
+          request.headers['user-agent']
+        );
 
         return {
           statusCode: 204,

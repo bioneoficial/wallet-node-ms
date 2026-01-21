@@ -26,11 +26,12 @@ describe('AuthenticateUserUseCase', () => {
   let mockTokenGenerator: jest.Mocked<TokenGenerator>;
 
   const mockUser = {
-    id: 'user-1',
+    id: 'user-123',
     firstName: 'John',
     lastName: 'Doe',
     email: 'john@example.com',
     password: 'hashed_password',
+    role: 'USER' as const,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -61,6 +62,7 @@ describe('AuthenticateUserUseCase', () => {
     expect(mockTokenGenerator.sign).toHaveBeenCalledWith({
       sub: mockUser.id,
       email: mockUser.email,
+      role: mockUser.role,
     });
   });
 
