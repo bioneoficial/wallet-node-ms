@@ -28,6 +28,12 @@ export async function authRoutes(
   app.post(
     '/auth',
     {
+      config: {
+        rateLimit: {
+          max: 5, // 5 login attempts
+          timeWindow: '1 minute', // per minute
+        },
+      },
       schema: {
         description: 'Authenticate user and get access token',
         tags: ['Auth'],

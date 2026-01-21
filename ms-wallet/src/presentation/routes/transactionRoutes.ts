@@ -9,6 +9,14 @@ import {
   idempotencyKeyHeaderSchema,
 } from '../../infrastructure/http/schemas/transactionSchemas.js';
 
+const transactionResponseSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  amount: z.number(),
+  type: z.enum(['CREDIT', 'DEBIT']),
+  created_at: z.string(),
+});
+
 const errorResponseSchema = z.object({
   error: z.string(),
   message: z.string(),
@@ -24,19 +32,19 @@ export async function transactionRoutes(
   app.post(
     '/transactions',
     {
+      config: {
+        rateLimit: {
+          max: 20, // 20 transactions
+          timeWindow: '1 minute', // per minute
+        },
+      },
       schema: {
         description: 'Create a new transaction',
         tags: ['Transactions'],
         body: createTransactionSchema,
         headers: idempotencyKeyHeaderSchema,
         response: {
-          201: z.object({
-            id: z.string(),
-            user_id: z.string(),
-            amount: z.number(),
-            type: z.enum(['CREDIT', 'DEBIT']),
-            created_at: z.string(),
-          }),
+          201: transactionResponseSchema,
           400: errorResponseSchema,
           401: errorResponseSchema,
           409: errorResponseSchema,

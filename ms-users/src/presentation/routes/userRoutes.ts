@@ -31,6 +31,12 @@ export async function userRoutes(
   app.post(
     '/users',
     {
+      config: {
+        rateLimit: {
+          max: 3, // 3 user registrations
+          timeWindow: '5 minutes', // per 5 minutes
+        },
+      },
       schema: {
         description: 'Create a new user',
         tags: ['Users'],

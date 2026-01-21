@@ -43,6 +43,26 @@ export async function buildApp() {
     },
   }).withTypeProvider<ZodTypeProvider>();
 
+  await app.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https:'],
+      },
+    },
+  });
+
+  // Rate limiting (global)
+  await app.register(rateLimit, {
+    max: 100, // 100 requests per minute globally
+    timeWindow: '1 minute',
+    cache: 10000,
+    allowList: (req) => {
+      // Allow localhost and Docker internal IPs for E2E tests
+      return req.ip === '127.0.0.1' || req.ip === '::1' || req.ip.startsWith('192.168.');
+    },
+  });
+
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
 
