@@ -1,5 +1,5 @@
-import { DeleteUserTransactionsUseCase } from '../../src/application/usecases/DeleteUserTransactionsUseCase';
-import { TransactionRepository } from '../../src/domain/repositories/TransactionRepository';
+import { DeleteUserTransactionsUseCase } from '../../src/application/usecases/DeleteUserTransactionsUseCase.js';
+import { TransactionRepository } from '../../src/domain/repositories/TransactionRepository.js';
 
 const createMockRepository = (): jest.Mocked<TransactionRepository> => ({
   create: jest.fn(),

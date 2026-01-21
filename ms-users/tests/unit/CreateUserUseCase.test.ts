@@ -1,5 +1,5 @@
-import { CreateUserUseCase } from '../../src/application/usecases/CreateUserUseCase';
-import { UserRepository } from '../../src/domain/repositories/UserRepository';
+import { CreateUserUseCase } from '../../src/application/usecases/CreateUserUseCase.js';
+import { UserRepository } from '../../src/domain/repositories/UserRepository.js';
 
 jest.mock('bcryptjs', () => ({
   hash: jest.fn().mockResolvedValue('hashed_password'),

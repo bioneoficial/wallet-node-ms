@@ -1,5 +1,5 @@
-import { GetUsersUseCase } from '../../src/application/usecases/GetUsersUseCase';
-import { UserRepository } from '../../src/domain/repositories/UserRepository';
+import { GetUsersUseCase } from '../../src/application/usecases/GetUsersUseCase.js';
+import { UserRepository } from '../../src/domain/repositories/UserRepository.js';
 
 const createMockRepository = (): jest.Mocked<UserRepository> => ({
   create: jest.fn(),

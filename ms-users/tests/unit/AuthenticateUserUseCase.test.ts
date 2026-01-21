@@ -1,5 +1,5 @@
-import { AuthenticateUserUseCase, TokenGenerator } from '../../src/application/usecases/AuthenticateUserUseCase';
-import { UserRepository } from '../../src/domain/repositories/UserRepository';
+import { AuthenticateUserUseCase, TokenGenerator } from '../../src/application/usecases/AuthenticateUserUseCase.js';
+import { UserRepository } from '../../src/domain/repositories/UserRepository.js';
 
 jest.mock('bcryptjs', () => ({
   compare: jest.fn(),

@@ -1,6 +1,6 @@
-import { GetTransactionsUseCase } from '../../src/application/usecases/GetTransactionsUseCase';
-import { TransactionRepository } from '../../src/domain/repositories/TransactionRepository';
-import { TransactionType } from '../../src/domain/entities/Transaction';
+import { GetTransactionsUseCase } from '../../src/application/usecases/GetTransactionsUseCase.js';
+import { TransactionRepository } from '../../src/domain/repositories/TransactionRepository.js';
+import { TransactionType } from '../../src/domain/entities/Transaction.js';
 
 const createMockRepository = (): jest.Mocked<TransactionRepository> => ({
   create: jest.fn(),

@@ -1,5 +1,5 @@
-import { DeleteUserUseCase, WalletGrpcClient } from '../../src/application/usecases/DeleteUserUseCase';
-import { UserRepository } from '../../src/domain/repositories/UserRepository';
+import { DeleteUserUseCase, WalletGrpcClient } from '../../src/application/usecases/DeleteUserUseCase.js';
+import { UserRepository } from '../../src/domain/repositories/UserRepository.js';
 
 const createMockRepository = (): jest.Mocked<UserRepository> => ({
   create: jest.fn(),

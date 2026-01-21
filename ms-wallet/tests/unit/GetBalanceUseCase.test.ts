@@ -1,5 +1,5 @@
-import { GetBalanceUseCase } from '../../src/application/usecases/GetBalanceUseCase';
-import { TransactionRepository } from '../../src/domain/repositories/TransactionRepository';
+import { GetBalanceUseCase } from '../../src/application/usecases/GetBalanceUseCase.js';
+import { TransactionRepository } from '../../src/domain/repositories/TransactionRepository.js';
 
 const createMockRepository = (): jest.Mocked<TransactionRepository> => ({
   create: jest.fn(),
